@@ -27,14 +27,20 @@ fn parse_clippings(filename: PathBuf) {
     wtr.flush().unwrap();
 }
 
-fn parse_note(note: impl ToString) -> Option<(String, String)> {
-    let lines: Vec<String> = note.to_string().lines().map(|x| x.to_string()).collect();
+fn parse_note(note: &str) -> Option<(String, String)> {
+    let lines: Vec<&str> = note.lines().collect();
     let title: String = lines
         .iter()
         .take(1)
         .map(|x| x.trim().trim_start_matches("\u{feff}"))
         .collect();
-    let tidied_note: String = lines.iter().skip(1).map(tidy_note_line).collect();
+    let tidied_note: String = lines
+        .iter()
+        .skip(1)
+        .filter(|l| !is_useless_line(l))
+        .map(|l| l.to_string())
+        .collect::<Vec<String>>()
+        .join("\n");
     if title.is_empty() || tidied_note.is_empty() {
         None
     } else {
@@ -42,15 +48,9 @@ fn parse_note(note: impl ToString) -> Option<(String, String)> {
     }
 }
 
-fn tidy_note_line(line: impl ToString) -> String {
-    let linestr = line.to_string();
-    if linestr.starts_with("- Votre surlignement")
-        || linestr.starts_with("- Votre signet")
-        || linestr.starts_with("- Votre note")
-        || linestr.is_empty()
-    {
-        "".to_string()
-    } else {
-        linestr + "\n"
-    }
+fn is_useless_line(line: &str) -> bool {
+    line.starts_with("- Votre surlignement")
+        || line.starts_with("- Votre signet")
+        || line.starts_with("- Votre note")
+        || line.is_empty()
 }
