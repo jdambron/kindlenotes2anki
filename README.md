@@ -1,5 +1,7 @@
 # kindlenotes2anki
 
+![Rust](https://github.com/jdambron/kindlenotes2anki/workflows/Rust/badge.svg)
+
 Tool to convert kindle clippings file to CSV for importing in [Anki](https://apps.ankiweb.net/)
 
 ## Disclaimer
