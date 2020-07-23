@@ -3,7 +3,14 @@
 ![Continuous integration](https://github.com/jdambron/kindlenotes2anki/workflows/Continuous%20integration/badge.svg)
 ![Rust](https://github.com/jdambron/kindlenotes2anki/workflows/Rust/badge.svg)
 
-Tool to convert kindle clippings file to CSV for importing in [Anki](https://apps.ankiweb.net/)
+A tool to import Kindle clippings file to [Anki](https://apps.ankiweb.net/)
+
+There are 2 modes :
+
+1. Generate a CSV output than can be imported into Anki (default)
+1. Direct import using [AnkiConnect](https://foosoft.net/projects/anki-connect/)
+
+⚠️ To be able to use the direct import, you must first install AnkiConnect and launch Anki.
 
 ## Disclaimer
 
@@ -16,8 +23,17 @@ So there are probably lots of things that can be improved.
 cargo build --release
 ```
 
-## Run
+## Usage
 
-```Shell
-kindlenotes2anki My\ Clippings.txt > file.csv
+```
+USAGE:
+    kindlenotes2anki [FLAGS] <clippings>
+
+FLAGS:
+    -c, --connect    Use AnkiConnect, if not provided will generate a CSV output
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+ARGS:
+    <clippings>    The path to the clippings txt file to read
 ```

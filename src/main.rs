@@ -1,33 +1,56 @@
+mod connect;
 use std::io;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
+#[macro_use]
+extern crate simple_error;
+
 #[derive(StructOpt)]
+#[structopt(
+    name = "kindlenotes2anki",
+    about = "A tool to import kindle clippings file to Anki"
+)]
 struct Cli {
-    /// The path to the file to read
+    /// The path to the clippings txt file to read
     #[structopt(parse(from_os_str))]
     clippings: PathBuf,
+    /// Use AnkiConnect, if not provided will generate a CSV output
+    #[structopt(short, long)]
+    connect: bool,
+}
+
+/// Representation of a note
+pub struct Note {
+    /// Title of the book
+    title: String,
+    /// Tidied content of the note
+    tidied_note: String,
 }
 
 fn main() {
     let args = Cli::from_args();
-    parse_clippings(args.clippings);
+    let notes = parse_clippings(args.clippings);
+    if args.connect {
+        connect::write_notes_ankiconnect(notes);
+    /*if let Err(why) = connect::add_note("front content", "back content") {
+        panic!("{:?}", why)
+    }*/
+    } else {
+        write_csv(notes);
+    }
 }
 
-fn parse_clippings(filename: PathBuf) {
-    let mut wtr = csv::Writer::from_writer(io::stdout());
+fn parse_clippings(filename: PathBuf) -> Vec<Note> {
     let separator = "==========\r\n";
     let content = std::fs::read_to_string(filename).unwrap();
-    let notes = content.split(separator);
-    for note in notes {
-        if let Some((title, tidied_note)) = parse_note(note) {
-            wtr.write_record(&[title, tidied_note]).unwrap();
-        }
-    }
-    wtr.flush().unwrap();
+    content
+        .split(separator)
+        .filter_map(|n| parse_note(n))
+        .collect()
 }
 
-fn parse_note(note: &str) -> Option<(String, String)> {
+fn parse_note(note: &str) -> Option<Note> {
     let lines: Vec<&str> = note.lines().collect();
     let title: String = lines
         .iter()
@@ -49,7 +72,7 @@ fn parse_note(note: &str) -> Option<(String, String)> {
     if title.is_empty() || tidied_note.is_empty() {
         None
     } else {
-        Some((title, tidied_note))
+        Some(Note { title, tidied_note })
     }
 }
 
@@ -58,6 +81,14 @@ fn is_useless_line(line: &str) -> bool {
         || line.starts_with("- Votre signet")
         || line.starts_with("- Votre note")
         || line.is_empty()
+}
+
+fn write_csv(notes: Vec<Note>) {
+    let mut wtr = csv::Writer::from_writer(io::stdout());
+    for note in notes {
+        wtr.write_record(&[note.title, note.tidied_note]).unwrap();
+    }
+    wtr.flush().unwrap();
 }
 
 #[cfg(test)]
@@ -96,9 +127,9 @@ mod tests {
     #[test]
     fn test_parse_note() {
         let fake_note = "A fake title (Last, First)\n- Votre surlignement Emplacement 3592-3592 | Ajouté le mardi 6 novembre 2018 à 08:50:39\n\nThis is a fake highlight.\n";
-        if let Some((title, tidied_note)) = parse_note(fake_note) {
-            assert_eq!(title, "A fake title (Last, First)");
-            assert_eq!(tidied_note, "This is a fake highlight.");
+        if let Some(read_note) = parse_note(fake_note) {
+            assert_eq!(read_note.title, "A fake title (Last, First)");
+            assert_eq!(read_note.tidied_note, "This is a fake highlight.");
         } else {
             panic!("The parsed note should not be empty");
         }
