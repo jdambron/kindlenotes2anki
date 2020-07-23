@@ -37,8 +37,13 @@ fn parse_note(note: &str) -> Option<(String, String)> {
     let tidied_note: String = lines
         .iter()
         .skip(1)
-        .filter(|l| !is_useless_line(l))
-        .map(|l| l.to_string())
+        .filter_map(|l| {
+            if is_useless_line(l) {
+                None
+            } else {
+                Some((*l).to_string())
+            }
+        })
         .collect::<Vec<String>>()
         .join("\n");
     if title.is_empty() || tidied_note.is_empty() {

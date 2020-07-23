@@ -1,5 +1,6 @@
 # kindlenotes2anki
 
+![Continuous integration](https://github.com/jdambron/kindlenotes2anki/workflows/Continuous%20integration/badge.svg)
 ![Rust](https://github.com/jdambron/kindlenotes2anki/workflows/Rust/badge.svg)
 
 Tool to convert kindle clippings file to CSV for importing in [Anki](https://apps.ankiweb.net/)
