@@ -33,9 +33,6 @@ fn main() {
     let notes = parse_clippings(args.clippings);
     if args.connect {
         connect::write_notes_ankiconnect(notes);
-    /*if let Err(why) = connect::add_note("front content", "back content") {
-        panic!("{:?}", why)
-    }*/
     } else {
         write_csv(notes);
     }
