@@ -1,0 +1,117 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*" # push events to matching v*, i.e. v1.0, v20.15.10
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: ["x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "armv7-unknown-linux-musleabihf"]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --release --target ${{ matrix.target }}
+      - uses: actions/upload-artifact@v2
+        with:
+          name: "kindlenotes2anki-${{ matrix.target }}"
+          path: "target/${{ matrix.target }}/release/kindlenotes2anki"
+
+  build-darwin:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --target x86_64-apple-darwin
+      - uses: actions/upload-artifact@v2
+        with:
+          name: "kindlenotes2anki-x86_64-apple-darwin"
+          path: "target/x86_64-apple-darwin/release/kindlenotes2anki"
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --target x86_64-pc-windows-msvc
+      - uses: actions/upload-artifact@v2
+        with:
+          name: "kindlenotes2anki-x86_64-pc-windows-msvc"
+          path: "target/x86_64-pc-windows-msvc/release/kindlenotes2anki.exe"
+          
+  release-upload:
+    needs:
+      - build-linux
+      - build-darwin
+      - build-windows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+
+      - uses: actions/download-artifact@v2
+
+      - name: Display structure of downloaded files
+        run: ls -lR
+
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: "kindlenotes2anki-x86_64-unknown-linux-gnu/kindlenotes2anki"
+          asset_name: "kindlenotes2anki-x86_64-unknown-linux-gnu"
+          asset_content_type: application/octet-stream
+
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: "kindlenotes2anki-x86_64-unknown-linux-musl/kindlenotes2anki"
+          asset_name: "kindlenotes2anki-x86_64-unknown-linux-musl"
+          asset_content_type: application/octet-stream
+
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: "kindlenotes2anki-armv7-unknown-linux-musleabihf/kindlenotes2anki"
+          asset_name: "kindlenotes2anki-armv7-unknown-linux-musleabihf"
+          asset_content_type: application/octet-stream
+
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: "kindlenotes2anki-x86_64-apple-darwin/kindlenotes2anki"
+          asset_name: "kindlenotes2anki-x86_64-apple-darwin"
+          asset_content_type: application/octet-stream
+
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: "kindlenotes2anki-x86_64-pc-windows-msvc/kindlenotes2anki.exe"
+          asset_name: "kindlenotes2anki-x86_64-pc-windows-msvc.exe"
+          asset_content_type: application/octet-stream
