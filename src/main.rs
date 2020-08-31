@@ -3,9 +3,6 @@ use std::io;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
-#[macro_use]
-extern crate simple_error;
-
 #[derive(StructOpt)]
 #[structopt(
     name = "kindlenotes2anki",

@@ -1,5 +1,5 @@
+use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
-use std::error::Error;
 
 const DECK_NAME: &str = "Kindle";
 const MODEL_NAME: &str = "Basique";
@@ -48,7 +48,7 @@ struct Options {
 }
 
 #[tokio::main]
-async fn add_notes(notes: Vec<crate::Note>) -> Result<(), Box<dyn Error>> {
+async fn add_notes(notes: Vec<crate::Note>) -> Result<()> {
     let notes_count: usize = notes.len();
     let mut req = AddNotes {
         action: "addNotes".to_string(),
