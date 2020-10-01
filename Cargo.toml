@@ -1,6 +1,6 @@
 [package]
 name = "kindlenotes2anki"
-version = "0.3.5"
+version = "0.3.6"
 authors = ["jdambron"]
 edition = "2018"
 
