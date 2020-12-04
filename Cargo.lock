@@ -377,7 +377,7 @@ dependencies = [
 
 [[package]]
 name = "kindlenotes2anki"
-version = "0.3.7"
+version = "0.3.8"
 dependencies = [
  "anyhow",
  "csv",
