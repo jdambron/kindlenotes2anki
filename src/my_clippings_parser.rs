@@ -27,7 +27,7 @@ fn parse_note(note: &str) -> Option<Note> {
 fn get_title(note: &str) -> String {
     note.lines()
         .take(1)
-        .map(|x| x.trim().trim_start_matches("\u{feff}"))
+        .map(|x| x.trim().trim_start_matches('\u{feff}'))
         .collect()
 }
 
