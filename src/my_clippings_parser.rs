@@ -15,14 +15,24 @@ pub fn parse_clippings(filename: PathBuf) -> Vec<Note> {
 }
 
 fn parse_note(note: &str) -> Option<Note> {
-    let lines: Vec<&str> = note.lines().collect();
-    let title: String = lines
-        .iter()
+    let title: String = get_title(note);
+    let tidied_note: String = tidy_note(note);
+    if title.is_empty() || tidied_note.is_empty() {
+        None
+    } else {
+        Some(Note { title, tidied_note })
+    }
+}
+
+fn get_title(note: &str) -> String {
+    note.lines()
         .take(1)
         .map(|x| x.trim().trim_start_matches("\u{feff}"))
-        .collect();
-    let tidied_note: String = lines
-        .iter()
+        .collect()
+}
+
+fn tidy_note(note: &str) -> String {
+    note.lines()
         .skip(1)
         .filter_map(|l| {
             if is_useless_line(l) {
@@ -32,12 +42,7 @@ fn parse_note(note: &str) -> Option<Note> {
             }
         })
         .collect::<Vec<String>>()
-        .join("\n");
-    if title.is_empty() || tidied_note.is_empty() {
-        None
-    } else {
-        Some(Note { title, tidied_note })
-    }
+        .join("\n")
 }
 
 fn is_useless_line(line: &str) -> bool {

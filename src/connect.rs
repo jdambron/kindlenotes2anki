@@ -56,20 +56,7 @@ async fn add_notes(notes: Vec<crate::Note>) -> Result<()> {
         params: Notes { notes: Vec::new() },
     };
     for note in notes {
-        let fields = Fields {
-            recto: note.title,
-            verso: note.tidied_note,
-        };
-        let options = Options {
-            allow_duplicate: true,
-            duplicate_scope: "deck".to_string(),
-        };
-        let new_note = Note {
-            deck_name: DECK_NAME.to_string(),
-            model_name: MODEL_NAME.to_string(),
-            fields,
-            options,
-        };
+        let new_note = fill_note_api_params(note);
         req.params.notes.push(new_note);
     }
     let client = reqwest::Client::new();
@@ -89,6 +76,23 @@ async fn add_notes(notes: Vec<crate::Note>) -> Result<()> {
                 bail!("Some notes could not be created");
             }
         }
+    }
+}
+
+fn fill_note_api_params(note: crate::Note) -> Note {
+    let fields = Fields {
+        recto: note.title,
+        verso: note.tidied_note,
+    };
+    let options = Options {
+        allow_duplicate: true,
+        duplicate_scope: "deck".to_string(),
+    };
+    Note {
+        deck_name: DECK_NAME.to_string(),
+        model_name: MODEL_NAME.to_string(),
+        fields,
+        options,
     }
 }
 
