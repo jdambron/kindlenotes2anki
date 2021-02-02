@@ -1,0 +1,5 @@
+# Default config file: for a My Clippings.txt file in French
+[parser]
+bookmark = "- Votre signet"
+highlight = "- Votre surlignement"
+note = "- Votre note"
