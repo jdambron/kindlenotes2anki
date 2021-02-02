@@ -65,9 +65,11 @@ impl AppConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
     use std::path::Path;
 
     #[test]
+    #[serial]
     fn verify_get() {
         // Initialize configuration
         let config_contents = include_str!("resources/test_config.toml");
@@ -89,6 +91,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn verify_merge() {
         // Initialize configuration
         let config_contents = include_str!("resources/test_config.toml");
