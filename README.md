@@ -27,13 +27,20 @@ cargo build --release
 
 ```
 USAGE:
-    kindlenotes2anki [FLAGS] <clippings>
+    kindlenotes2anki.exe [FLAGS] [OPTIONS] <clippings>
 
 FLAGS:
     -c, --connect    Use AnkiConnect, if not provided will generate a CSV output
     -h, --help       Prints help information
     -V, --version    Prints version information
 
+OPTIONS:
+        --config <config>    The path to a config file, if not provided will use defaults
+
 ARGS:
     <clippings>    The path to the clippings txt file to read
 ```
+
+## Configuration
+
+You can adapt the configuration to your clippings file language customzing the configuration file.
