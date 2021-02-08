@@ -55,6 +55,7 @@ fn is_useless_line(line: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     fn setup() {
         let config_contents = include_str!("resources/test_config.toml");
@@ -62,12 +63,14 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn surlignement_is_useless() {
         setup();
         assert!(is_useless_line("- Votre surlignement Emplacement 1212-1214 | Ajouté le samedi 20 octobre 2018 à 12:55:45"));
     }
 
     #[test]
+    #[serial]
     fn signet_is_useless() {
         setup();
         assert!(is_useless_line(
@@ -76,6 +79,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn note_is_useless() {
         setup();
         assert!(is_useless_line(
@@ -84,18 +88,21 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn empty_is_useless() {
         setup();
         assert!(is_useless_line(""));
     }
 
     #[test]
+    #[serial]
     fn highlight_is_useful() {
         setup();
         assert!(!is_useless_line("A standard fake highlight"));
     }
 
     #[test]
+    #[serial]
     fn test_parse_note() {
         setup();
         let fake_note = "A fake title (Last, First)\n- Votre surlignement Emplacement 3592-3592 | Ajouté le mardi 6 novembre 2018 à 08:50:39\n\nThis is a fake highlight.\n";
