@@ -35,7 +35,7 @@ fn main() {
     app_config::AppConfig::init(Some(config_contents)).unwrap();
     let args = Cli::from_args();
     let notes = my_clippings_parser::parse_clippings(args.clippings);
-    let _ = app_config::AppConfig::merge_config(args.config);
+    let _c = app_config::AppConfig::merge_config(args.config);
     if args.connect {
         connect::write_notes_ankiconnect(notes);
     } else {
