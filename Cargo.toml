@@ -8,13 +8,13 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-config = { version = "0.10", features = ["toml"] }
+config = { version = "0.11", features = ["toml"] }
 csv = "^1.1"
 lazy_static = "1.4"
 reqwest = { version = "^0.11", default-features = false, features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 structopt = "^0.3"
-tokio = { version = "^1.2", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "^1.5", features = ["macros", "rt-multi-thread"] }
 
 [dev-dependencies]
 serial_test = "*"
