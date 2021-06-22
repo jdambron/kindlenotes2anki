@@ -60,17 +60,17 @@ async fn add_notes(notes: Vec<crate::Note>) -> Result<()> {
         req.params.notes.push(new_note);
     }
     let client = reqwest::Client::new();
-    let res = client
+    let response = client
         .post("http://localhost:8765")
         .json(&req)
         .send()
         .await?
         .json::<ApiResponse>()
         .await?;
-    match res.error {
+    match response.error {
         Some(error) => bail!(error),
         None => {
-            if res.result.into_iter().filter_map(|n| n).count() == notes_count {
+            if response.result.into_iter().flatten().count() == notes_count {
                 Ok(())
             } else {
                 bail!("Some notes could not be created");
