@@ -28,7 +28,7 @@ impl AppConfig {
         let mut settings = Config::new();
         if let Some(config_contents) = default_config {
             settings.merge(config::File::from_str(
-                &config_contents,
+                config_contents,
                 config::FileFormat::Toml,
             ))?;
         }
