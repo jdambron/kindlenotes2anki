@@ -5,10 +5,7 @@ use std::path::PathBuf;
 pub fn parse_clippings(filename: PathBuf) -> Vec<Note> {
     let separator = "==========\r\n";
     let content = std::fs::read_to_string(filename).unwrap();
-    content
-        .split(separator)
-        .filter_map(|n| parse_note(n))
-        .collect()
+    content.split(separator).filter_map(parse_note).collect()
 }
 
 fn parse_note(note: &str) -> Option<Note> {
