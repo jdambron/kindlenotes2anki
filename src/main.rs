@@ -31,11 +31,9 @@ pub struct Note {
 }
 
 fn main() {
-    let config_contents = include_str!("resources/default_config.toml");
-    app_config::AppConfig::init(Some(config_contents)).unwrap();
     let args = Cli::from_args();
+    app_config::AppConfig::init(args.config).unwrap();
     let notes = my_clippings_parser::parse_clippings(args.clippings);
-    let _c = app_config::AppConfig::merge_config(args.config);
     if args.connect {
         connect::write_notes_ankiconnect(notes);
     } else {

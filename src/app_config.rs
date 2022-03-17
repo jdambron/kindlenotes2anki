@@ -1,6 +1,6 @@
 extern crate config;
 
-use config::Config;
+use config::{Config, File};
 use lazy_static::lazy_static;
 use serde::Deserialize;
 use std::error::Error;
@@ -24,14 +24,22 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
-    pub fn init(default_config: Option<&str>) -> Result<(), Box<dyn Error>> {
-        let mut settings = Config::new();
-        if let Some(config_contents) = default_config {
-            settings.merge(config::File::from_str(
-                config_contents,
-                config::FileFormat::Toml,
-            ))?;
-        }
+    pub fn init(config_file: Option<PathBuf>) -> Result<(), Box<dyn Error>> {
+        let settings = match config_file {
+            None => Config::builder()
+                .set_default("parser.bookmark", "- Votre signet")?
+                .set_default("parser.highlight", "- Votre surlignement")?
+                .set_default("parser.note", "- Votre note")?
+                .build()
+                .unwrap(),
+            Some(config_file_path) => Config::builder()
+                .set_default("parser.bookmark", "- Votre signet")?
+                .set_default("parser.highlight", "- Votre surlignement")?
+                .set_default("parser.note", "- Votre note")?
+                .add_source(File::from(config_file_path))
+                .build()
+                .unwrap(),
+        };
         // Save Config to RwLoc
         {
             let mut w = CONFIG.write()?;
@@ -47,33 +55,19 @@ impl AppConfig {
     {
         Ok(CONFIG.read()?.get::<T>(key)?)
     }
-
-    // Merge config from another file
-    pub fn merge_config(config_file: Option<PathBuf>) -> Result<(), Box<dyn Error>> {
-        // Merge settings with config file if there is one
-        if let Some(config_file_path) = config_file {
-            {
-                CONFIG
-                    .write()?
-                    .merge(config::File::from(config_file_path))?;
-            }
-        }
-        Ok(())
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use serial_test::serial;
-    use std::path::Path;
+    use std::path::PathBuf;
 
     #[test]
     #[serial]
     fn verify_get() {
         // Initialize configuration
-        let config_contents = include_str!("resources/test_config.toml");
-        AppConfig::init(Some(config_contents)).unwrap();
+        AppConfig::init(None).unwrap();
 
         // Check value with get
         assert_eq!(
@@ -94,12 +88,7 @@ mod tests {
     #[serial]
     fn verify_merge() {
         // Initialize configuration
-        let config_contents = include_str!("resources/test_config.toml");
-        AppConfig::init(Some(config_contents)).unwrap();
-        let path = Path::new("src/resources/english_config.toml");
-        let mut path_buf = PathBuf::new();
-        path_buf.push(path);
-        AppConfig::merge_config(Some(path_buf)).unwrap();
+        AppConfig::init(Some(PathBuf::from("src/resources/english_config.toml"))).unwrap();
 
         // Check value with get
         assert_eq!(

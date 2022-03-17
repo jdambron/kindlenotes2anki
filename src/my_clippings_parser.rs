@@ -55,8 +55,8 @@ mod tests {
     use serial_test::serial;
 
     fn setup() {
-        let config_contents = include_str!("resources/test_config.toml");
-        crate::app_config::AppConfig::init(Some(config_contents)).unwrap();
+        crate::app_config::AppConfig::init(Some(PathBuf::from("src/resources/test_config.toml")))
+            .unwrap();
     }
 
     #[test]
