@@ -2,8 +2,8 @@ mod app_config;
 mod connect;
 mod csv_writer;
 mod my_clippings_parser;
-use std::path::PathBuf;
 use clap::StructOpt;
+use std::path::PathBuf;
 
 #[derive(StructOpt)]
 #[structopt(
