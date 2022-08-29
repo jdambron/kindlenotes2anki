@@ -3,7 +3,7 @@ mod connect;
 mod csv_writer;
 mod my_clippings_parser;
 use std::path::PathBuf;
-use structopt::StructOpt;
+use clap::StructOpt;
 
 #[derive(StructOpt)]
 #[structopt(
