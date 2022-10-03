@@ -25,19 +25,18 @@ cargo build --release
 ## Usage
 
 ```
-USAGE:
-    kindlenotes2anki.exe [FLAGS] [OPTIONS] <clippings>
+A tool to import kindle clippings file to Anki
 
-FLAGS:
-    -c, --connect    Use AnkiConnect, if not provided will generate a CSV output
-    -h, --help       Prints help information
-    -V, --version    Prints version information
+Usage: kindlenotes2anki.exe [OPTIONS] <CLIPPINGS>
 
-OPTIONS:
-        --config <config>    The path to a config file, if not provided will use defaults
+Arguments:
+  <CLIPPINGS>  The path to the clippings txt file to read
 
-ARGS:
-    <clippings>    The path to the clippings txt file to read
+Options:
+  -c, --connect          Use AnkiConnect, if not provided will generate a CSV output
+      --config <CONFIG>  The path to a config file, if not provided will use defaults
+  -h, --help             Print help information
+  -V, --version          Print version information
 ```
 
 ## Configuration

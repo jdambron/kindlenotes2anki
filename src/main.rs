@@ -2,23 +2,19 @@ mod app_config;
 mod connect;
 mod csv_writer;
 mod my_clippings_parser;
-use clap::StructOpt;
+use clap::Parser;
 use std::path::PathBuf;
 
-#[derive(StructOpt)]
-#[structopt(
-    name = "kindlenotes2anki",
-    about = "A tool to import kindle clippings file to Anki"
-)]
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
 struct Cli {
     /// The path to the clippings txt file to read
-    #[structopt(parse(from_os_str))]
     clippings: PathBuf,
     /// Use AnkiConnect, if not provided will generate a CSV output
-    #[structopt(short, long)]
+    #[arg(short, long)]
     connect: bool,
     /// The path to a config file, if not provided will use defaults
-    #[structopt(parse(from_os_str), long)]
+    #[arg(long)]
     config: Option<PathBuf>,
 }
 
@@ -31,7 +27,7 @@ pub struct Note {
 }
 
 fn main() {
-    let args = Cli::from_args();
+    let args = Cli::parse();
     app_config::AppConfig::init(args.config).unwrap();
     let notes = my_clippings_parser::parse_clippings(args.clippings);
     if args.connect {
