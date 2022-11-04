@@ -30,6 +30,7 @@ jobs:
         with:
           name: "kindlenotes2anki-${{ matrix.target }}"
           path: "target/${{ matrix.target }}/release/kindlenotes2anki"
+          if-no-files-found: error
 
   build-macos:
     runs-on: macos-latest
@@ -41,8 +42,9 @@ jobs:
         run: cargo build --release --target=aarch64-apple-darwin
       - uses: actions/upload-artifact@v3
         with:
-          name: "kindlenotes2anki-x86_64-apple-darwin"
-          path: "target/x86_64-apple-darwin/release/kindlenotes2anki"
+          name: "kindlenotes2anki-aarch64-apple-darwin"
+          path: "target/aarch64-apple-darwin/release/kindlenotes2anki"
+          if-no-files-found: error
 
   build-windows:
     runs-on: windows-latest
@@ -54,6 +56,7 @@ jobs:
         with:
           name: "kindlenotes2anki-x86_64-pc-windows-msvc"
           path: "target/x86_64-pc-windows-msvc/release/kindlenotes2anki.exe"
+          if-no-files-found: error
           
   release-upload:
     needs:
@@ -62,18 +65,25 @@ jobs:
       - build-windows
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      - id: create_release
-        uses: actions/create-release@v1
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-
-      - uses: actions/download-artifact@v3
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
 
       - name: Display structure of downloaded files
         run: ls -lR
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            kindlenotes2anki-armv7-unknown-linux-musleabihf/kindlenotes2anki
+            kindlenotes2anki-x86_64-unknown-linux-gnu/kindlenotes2anki
+            kindlenotes2anki-x86_64-unknown-linux-musl/kindlenotes2anki
+            kindlenotes2anki-x86_64-pc-windows-msvc/kindlenotes2anki.exe
+            kindlenotes2anki-aarch64-apple-darwin/kindlenotes2anki
 
       - uses: actions/upload-release-asset@v1
         with:
