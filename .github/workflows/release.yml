@@ -58,7 +58,7 @@ jobs:
   release-upload:
     needs:
       - build-linux
-      - build-darwin
+      - build-macos
       - build-windows
     runs-on: ubuntu-latest
     steps:
