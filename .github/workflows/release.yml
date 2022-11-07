@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: ["x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "armv7-unknown-linux-musleabihf"]
+        target: ["x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "armv7-unknown-linux-gnueabihf"]
     steps:
       - uses: actions/checkout@v3
       - name: Install prerequisites
@@ -77,7 +77,7 @@ jobs:
 
       - name: Rename files
         run: |
-          mv kindlenotes2anki-armv7-unknown-linux-musleabihf/kindlenotes2anki kindlenotes2anki-armv7-unknown-linux-musleabihf/kindlenotes2anki-armv7-unknown-linux-musleabihf
+          mv kindlenotes2anki-armv7-unknown-linux-gnueabihf/kindlenotes2anki kindlenotes2anki-armv7-unknown-linux-gnueabihf/kindlenotes2anki-armv7-unknown-linux-gnueabihf
           mv kindlenotes2anki-x86_64-unknown-linux-gnu/kindlenotes2anki kindlenotes2anki-x86_64-unknown-linux-gnu/kindlenotes2anki-x86_64-unknown-linux-gnu
           mv kindlenotes2anki-x86_64-unknown-linux-musl/kindlenotes2anki kindlenotes2anki-x86_64-unknown-linux-musl/kindlenotes2anki-x86_64-unknown-linux-musl
           mv kindlenotes2anki-aarch64-apple-darwin/kindlenotes2anki kindlenotes2anki-aarch64-apple-darwin/kindlenotes2anki-aarch64-apple-darwin
@@ -87,7 +87,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            kindlenotes2anki-armv7-unknown-linux-musleabihf/kindlenotes2anki-armv7-unknown-linux-musleabihf
+            kindlenotes2anki-armv7-unknown-linux-gnueabihf/kindlenotes2anki-armv7-unknown-linux-gnueabihf
             kindlenotes2anki-x86_64-unknown-linux-gnu/kindlenotes2anki-x86_64-unknown-linux-gnu
             kindlenotes2anki-x86_64-unknown-linux-musl/kindlenotes2anki-x86_64-unknown-linux-musl
             kindlenotes2anki-x86_64-pc-windows-msvc/kindlenotes2anki.exe
