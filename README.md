@@ -1,6 +1,6 @@
 # kindlenotes2anki
 
-![Continuous integration](https://github.com/jdambron/kindlenotes2anki/workflows/Continuous%20integration/badge.svg)
+[![Continuous integration](https://github.com/jdambron/kindlenotes2anki/actions/workflows/ci.yml/badge.svg)](https://github.com/jdambron/kindlenotes2anki/actions/workflows/ci.yml)
 
 A tool to import Kindle clippings file to [Anki](https://apps.ankiweb.net/)
 
