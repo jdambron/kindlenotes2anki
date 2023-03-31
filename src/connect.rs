@@ -55,10 +55,8 @@ async fn add_notes(notes: Vec<crate::Note>) -> Result<()> {
         version: 6,
         params: Notes { notes: Vec::new() },
     };
-    for note in notes {
-        let new_note = fill_note_api_params(note);
-        req.params.notes.push(new_note);
-    }
+    let notes_params = notes.into_iter().map(fill_note_api_params).collect();
+    req.params.notes = notes_params;
     let client = reqwest::Client::new();
     let response = client
         .post("http://localhost:8765")

@@ -2,10 +2,20 @@ use crate::app_config::AppConfig;
 use crate::Note;
 use std::path::PathBuf;
 
+const BOOKMARK: &str = "parser.bookmark";
+const HIGHLIGHT: &str = "parser.highlight";
+const NOTE: &str = "parser.note";
+const SEPARATOR: &str = "==========\r\n";
+
+lazy_static::lazy_static! {
+    static ref HIGHLIGHT_VALUE: String = AppConfig::get::<String>(HIGHLIGHT).unwrap();
+    static ref BOOKMARK_VALUE: String = AppConfig::get::<String>(BOOKMARK).unwrap();
+    static ref NOTE_VALUE: String = AppConfig::get::<String>(NOTE).unwrap();
+}
+
 pub fn parse_clippings(filename: PathBuf) -> Vec<Note> {
-    let separator = "==========\r\n";
     let content = std::fs::read_to_string(filename).unwrap();
-    content.split(separator).filter_map(parse_note).collect()
+    content.split(SEPARATOR).filter_map(parse_note).collect()
 }
 
 fn parse_note(note: &str) -> Option<Note> {
@@ -21,31 +31,24 @@ fn parse_note(note: &str) -> Option<Note> {
 fn get_title(note: &str) -> String {
     note.lines()
         .take(1)
-        .map(|x| x.trim().trim_start_matches('\u{feff}'))
+        .map(str::trim)
+        .map(|x| x.trim_start_matches('\u{feff}'))
         .collect()
 }
 
 fn tidy_note(note: &str) -> String {
     note.lines()
         .skip(1)
-        .filter_map(|l| {
-            if is_useless_line(l) {
-                None
-            } else {
-                Some((*l).to_string())
-            }
-        })
+        .filter(|l| !is_useless_line(l))
+        .map(str::to_owned)
         .collect::<Vec<String>>()
         .join("\n")
 }
 
 fn is_useless_line(line: &str) -> bool {
-    let highlight = AppConfig::get::<String>("parser.highlight").unwrap();
-    let bookmark = AppConfig::get::<String>("parser.bookmark").unwrap();
-    let note = AppConfig::get::<String>("parser.note").unwrap();
-    line.starts_with(&highlight)
-        || line.starts_with(&bookmark)
-        || line.starts_with(&note)
+    line.starts_with(&*HIGHLIGHT_VALUE)
+        || line.starts_with(&*BOOKMARK_VALUE)
+        || line.starts_with(&*NOTE_VALUE)
         || line.is_empty()
 }
 
@@ -109,5 +112,19 @@ mod tests {
         } else {
             panic!("The parsed note should not be empty");
         }
+    }
+
+    #[test]
+    #[serial]
+    fn get_title_valid_note() {
+        let note = "A valid title\nThis is the note content.";
+        assert_eq!(get_title(note), "A valid title");
+    }
+
+    #[test]
+    #[serial]
+    fn tidy_note_valid_note() {
+        let note = "- Votre surlignement Emplacement 1212-1214 | Ajouté le samedi 20 octobre 2018 à 12:55:45\nThis is the note content.\n- Votre signet Emplacement 5527 | Ajouté le vendredi 16 novembre 2018 à 11:51:19\n";
+        assert_eq!(tidy_note(note), "This is the note content.");
     }
 }
