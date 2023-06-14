@@ -1,21 +1,26 @@
 use crate::app_config::AppConfig;
 use crate::Note;
+use regex::Regex;
 use std::path::PathBuf;
 
 const BOOKMARK: &str = "parser.bookmark";
 const HIGHLIGHT: &str = "parser.highlight";
 const NOTE: &str = "parser.note";
-const SEPARATOR: &str = "==========\r\n";
+const SEPARATOR: &str = r"==========\r?\n?";
 
 lazy_static::lazy_static! {
     static ref HIGHLIGHT_VALUE: String = AppConfig::get::<String>(HIGHLIGHT).unwrap();
     static ref BOOKMARK_VALUE: String = AppConfig::get::<String>(BOOKMARK).unwrap();
     static ref NOTE_VALUE: String = AppConfig::get::<String>(NOTE).unwrap();
+    static ref REGEX_SEPARATOR: Regex = Regex::new(SEPARATOR).unwrap();
 }
 
 pub fn parse_clippings(filename: PathBuf) -> Vec<Note> {
     let content = std::fs::read_to_string(filename).unwrap();
-    content.split(SEPARATOR).filter_map(parse_note).collect()
+    REGEX_SEPARATOR
+        .split(&content)
+        .filter_map(parse_note)
+        .collect()
 }
 
 fn parse_note(note: &str) -> Option<Note> {
