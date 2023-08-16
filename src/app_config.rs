@@ -25,21 +25,14 @@ pub struct AppConfig {
 
 impl AppConfig {
     pub fn init(config_file: Option<PathBuf>) -> Result<(), Box<dyn Error>> {
-        let settings = match config_file {
-            None => Config::builder()
-                .set_default("parser.bookmark", "- Votre signet")?
-                .set_default("parser.highlight", "- Votre surlignement")?
-                .set_default("parser.note", "- Votre note")?
-                .build()
-                .unwrap(),
-            Some(config_file_path) => Config::builder()
-                .set_default("parser.bookmark", "- Votre signet")?
-                .set_default("parser.highlight", "- Votre surlignement")?
-                .set_default("parser.note", "- Votre note")?
-                .add_source(File::from(config_file_path))
-                .build()
-                .unwrap(),
-        };
+        let mut builder = Config::builder()
+            .set_default("parser.bookmark", "- Votre signet")?
+            .set_default("parser.highlight", "- Votre surlignement")?
+            .set_default("parser.note", "- Votre note")?;
+        if let Some(config_file_path) = config_file {
+            builder = builder.add_source(File::from(config_file_path));
+        }
+        let settings = builder.build()?;
         // Save Config to RwLoc
         {
             let mut w = CONFIG.write()?;
