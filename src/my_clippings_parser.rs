@@ -15,12 +15,13 @@ lazy_static::lazy_static! {
     static ref REGEX_SEPARATOR: Regex = Regex::new(SEPARATOR).unwrap();
 }
 
-pub fn parse_clippings(filename: PathBuf) -> Vec<Note> {
-    let content = std::fs::read_to_string(filename).unwrap();
-    REGEX_SEPARATOR
+pub fn parse_clippings(filename: PathBuf) -> Result<Vec<Note>, std::io::Error> {
+    let content = std::fs::read_to_string(filename)?;
+    let notes = REGEX_SEPARATOR
         .split(&content)
         .filter_map(parse_note)
-        .collect()
+        .collect();
+    Ok(notes)
 }
 
 fn parse_note(note: &str) -> Option<Note> {

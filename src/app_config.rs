@@ -58,7 +58,7 @@ mod tests {
 
     #[test]
     #[serial]
-    fn verify_get() {
+    fn test_default_values() {
         // Initialize configuration
         AppConfig::init(None).unwrap();
 
@@ -79,7 +79,7 @@ mod tests {
 
     #[test]
     #[serial]
-    fn verify_merge() {
+    fn test_custom_configuration() {
         // Initialize configuration
         AppConfig::init(Some(PathBuf::from("src/resources/english_config.toml"))).unwrap();
 
