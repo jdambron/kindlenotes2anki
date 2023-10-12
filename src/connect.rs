@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{bail, Ok, Result};
 use serde::{Deserialize, Serialize};
 
 const DECK_NAME: &str = "Kindle";
@@ -82,15 +82,14 @@ fn fill_note_api_params(note: crate::Note) -> Note {
         recto: note.title,
         verso: note.tidied_note,
     };
-    let options = Options {
-        allow_duplicate: true,
-        duplicate_scope: "deck".to_string(),
-    };
     Note {
         deck_name: DECK_NAME.to_string(),
         model_name: MODEL_NAME.to_string(),
         fields,
-        options,
+        options: Options {
+            allow_duplicate: true,
+            duplicate_scope: "deck".to_string(),
+        },
     }
 }
 
