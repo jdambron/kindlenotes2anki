@@ -93,6 +93,7 @@ fn fill_note_api_params(note: crate::Note) -> Note {
     }
 }
 
-pub fn write_notes_ankiconnect(notes: Vec<crate::Note>) {
-    add_notes(notes).unwrap();
+pub fn write_notes_ankiconnect(notes: Vec<crate::Note>) -> Result<()> {
+    add_notes(notes)?;
+    Ok(())
 }

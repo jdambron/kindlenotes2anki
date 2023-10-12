@@ -2,6 +2,7 @@ mod app_config;
 mod connect;
 mod csv_writer;
 mod my_clippings_parser;
+use anyhow::{Context, Result};
 use clap::Parser;
 use std::path::PathBuf;
 
@@ -26,13 +27,15 @@ pub struct Note {
     tidied_note: String,
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::parse();
-    app_config::AppConfig::init(args.config).unwrap();
-    let notes = my_clippings_parser::parse_clippings(args.clippings);
+    app_config::AppConfig::init(args.config)?;
+    let notes = my_clippings_parser::parse_clippings(args.clippings)
+        .context("Failed to parse clippings")?;
     if args.connect {
-        connect::write_notes_ankiconnect(notes);
+        connect::write_notes_ankiconnect(notes).context("Failed to send notes to AnkiConnect")?;
     } else {
-        csv_writer::write_csv(notes);
+        csv_writer::write_csv(notes).context("Failed to write notes to CSV")?;
     }
+    Ok(())
 }
