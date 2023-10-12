@@ -45,15 +45,14 @@ fn tidy_note(note: &str) -> String {
     note.lines()
         .skip(1)
         .filter(|l| !is_useless_line(l))
-        .map(str::to_owned)
-        .collect::<Vec<String>>()
+        .collect::<Vec<&str>>()
         .join("\n")
 }
 
 fn is_useless_line(line: &str) -> bool {
-    line.starts_with(&*HIGHLIGHT_VALUE)
-        || line.starts_with(&*BOOKMARK_VALUE)
-        || line.starts_with(&*NOTE_VALUE)
+    line.starts_with(HIGHLIGHT_VALUE.as_str())
+        || line.starts_with(BOOKMARK_VALUE.as_str())
+        || line.starts_with(NOTE_VALUE.as_str())
         || line.is_empty()
 }
 
