@@ -11,7 +11,7 @@ use std::path::PathBuf;
 struct Cli {
     /// The path to the clippings txt file to read
     clippings: PathBuf,
-    /// Use AnkiConnect, if not provided will generate a CSV output
+    /// Use `AnkiConnect`, if not provided will generate a CSV output
     #[arg(short, long)]
     connect: bool,
     /// The path to a config file, if not provided will use defaults
