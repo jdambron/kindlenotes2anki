@@ -12,16 +12,7 @@ lazy_static! {
 }
 
 #[derive(Deserialize)]
-pub struct Parser {
-    pub bookmark: String,
-    pub highlight: String,
-    pub note: String,
-}
-
-#[derive(Deserialize)]
-pub struct AppConfig {
-    pub parser: Parser,
-}
+pub struct AppConfig {}
 
 impl AppConfig {
     pub fn init(config_file: Option<PathBuf>) -> Result<(), Box<dyn Error>> {
