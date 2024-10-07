@@ -80,6 +80,14 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_clippings_empty() {
+        let _file = File::create("test_clippings.txt").unwrap();
+        let notes = parse_clippings(PathBuf::from("test_clippings.txt")).unwrap();
+        assert!(notes.is_empty());
+        std::fs::remove_file("test_clippings.txt").unwrap();
+    }
+
+    #[test]
     #[serial]
     fn surlignement_is_useless() {
         setup();
