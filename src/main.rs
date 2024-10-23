@@ -29,7 +29,8 @@ pub struct Note {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::parse();
-    app_config::AppConfig::init(args.config)?;
+    app_config::AppConfig::init(args.config)
+        .map_err(|e| anyhow::anyhow!("Failed to initialize app config: {}", e))?;
     let notes = my_clippings_parser::parse_clippings(args.clippings)
         .context("Failed to parse clippings")?;
     if args.use_anki_connect {

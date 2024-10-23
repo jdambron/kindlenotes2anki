@@ -1,5 +1,6 @@
 extern crate config;
 
+use anyhow::{Context, Result};
 use config::{Config, File};
 use lazy_static::lazy_static;
 use serde::Deserialize;
@@ -23,7 +24,7 @@ impl AppConfig {
         if let Some(config_file_path) = config_file {
             builder = builder.add_source(File::from(config_file_path));
         }
-        let settings = builder.build()?;
+        let settings = builder.build().context("Failed to load config file")?;
         // Save Config to RwLoc
         {
             let mut w = CONFIG.write()?;
