@@ -44,35 +44,39 @@ fn parse_note(lines: &[String]) -> Option<Note> {
     let title = lines[0].trim().to_string();
     let tidied_note: String = lines[1..]
         .iter()
-        .filter(|l| !is_useless_line(l))
+        .filter(|l| !is_empty_or_useless_line(l))
         .cloned()
         .collect::<Vec<String>>()
         .join("\n");
 
-    if title.is_empty() || tidied_note.is_empty() {
+    if is_empty_or_useless_line(&title) || is_empty_or_useless_line(&tidied_note) {
         None
     } else {
         Some(Note { title, tidied_note })
     }
 }
 
-fn is_useless_line(line: &str) -> bool {
-    line.starts_with(HIGHLIGHT_VALUE.as_str())
+fn is_empty_or_useless_line(line: &str) -> bool {
+    line.is_empty()
+        || line.starts_with(HIGHLIGHT_VALUE.as_str())
         || line.starts_with(BOOKMARK_VALUE.as_str())
         || line.starts_with(NOTE_VALUE.as_str())
-        || line.is_empty()
 }
 
 lazy_static::lazy_static! {
-    static ref HIGHLIGHT_VALUE: String = AppConfig::get::<String>("parser.highlight").unwrap();
-    static ref BOOKMARK_VALUE: String = AppConfig::get::<String>("parser.bookmark").unwrap();
-    static ref NOTE_VALUE: String = AppConfig::get::<String>("parser.note").unwrap();
+    static ref HIGHLIGHT_VALUE: String = AppConfig::get::<String>("parser.highlight")
+        .expect("Failed to load 'highlight' value from config. Please check your config file.");
+    static ref BOOKMARK_VALUE: String = AppConfig::get::<String>("parser.bookmark")
+        .expect("Failed to load 'bookmark' value from config. Please check your config file.");
+    static ref NOTE_VALUE: String = AppConfig::get::<String>("parser.note")
+        .expect("Failed to load 'note' value from config. Please check your config file.");
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use serial_test::serial;
+    use tempfile::tempdir;
 
     fn setup() {
         crate::app_config::AppConfig::init(Some(PathBuf::from("src/resources/test_config.toml")))
@@ -81,24 +85,26 @@ mod tests {
 
     #[test]
     fn test_parse_clippings_empty() {
-        let _file = File::create("test_clippings.txt").unwrap();
-        let notes = parse_clippings(PathBuf::from("test_clippings.txt")).unwrap();
+        let temp_dir = tempdir().expect("Failed to create temporary directory.");
+        let file_path = temp_dir.path().join("test_clippings.txt");
+        std::fs::File::create(&file_path).expect("Failed to create temporary file.");
+
+        let notes = parse_clippings(file_path).expect("Failed to parse temporary file.");
         assert!(notes.is_empty());
-        std::fs::remove_file("test_clippings.txt").unwrap();
     }
 
     #[test]
     #[serial]
     fn surlignement_is_useless() {
         setup();
-        assert!(is_useless_line("- Votre surlignement Emplacement 1212-1214 | Ajouté le samedi 20 octobre 2018 à 12:55:45"));
+        assert!(is_empty_or_useless_line("- Votre surlignement Emplacement 1212-1214 | Ajouté le samedi 20 octobre 2018 à 12:55:45"));
     }
 
     #[test]
     #[serial]
     fn signet_is_useless() {
         setup();
-        assert!(is_useless_line(
+        assert!(is_empty_or_useless_line(
             "- Votre signet Emplacement 5527 | Ajouté le vendredi 16 novembre 2018 à 11:51:19"
         ));
     }
@@ -107,7 +113,7 @@ mod tests {
     #[serial]
     fn note_is_useless() {
         setup();
-        assert!(is_useless_line(
+        assert!(is_empty_or_useless_line(
             "- Votre note Emplacement 3752 | Ajoutée le vendredi 16 novembre 2018 à 13:51:19"
         ));
     }
@@ -116,14 +122,14 @@ mod tests {
     #[serial]
     fn empty_is_useless() {
         setup();
-        assert!(is_useless_line(""));
+        assert!(is_empty_or_useless_line(""));
     }
 
     #[test]
     #[serial]
     fn highlight_is_useful() {
         setup();
-        assert!(!is_useless_line("A standard fake highlight"));
+        assert!(!is_empty_or_useless_line("A standard fake highlight"));
     }
 
     #[test]
