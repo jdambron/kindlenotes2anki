@@ -13,7 +13,7 @@ struct Cli {
     clippings: PathBuf,
     /// Use `AnkiConnect`, if not provided will generate a CSV output
     #[arg(short, long)]
-    connect: bool,
+    use_anki_connect: bool,
     /// The path to a config file, if not provided will use defaults
     #[arg(long)]
     config: Option<PathBuf>,
@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     app_config::AppConfig::init(args.config)?;
     let notes = my_clippings_parser::parse_clippings(args.clippings)
         .context("Failed to parse clippings")?;
-    if args.connect {
+    if args.use_anki_connect {
         connect::write_notes_ankiconnect(notes).context("Failed to send notes to AnkiConnect")?;
     } else {
         csv_writer::write_csv(notes).context("Failed to write notes to CSV")?;

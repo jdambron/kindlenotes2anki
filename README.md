@@ -33,10 +33,10 @@ Arguments:
   <CLIPPINGS>  The path to the clippings txt file to read
 
 Options:
-  -c, --connect          Use AnkiConnect, if not provided will generate a CSV output
-      --config <CONFIG>  The path to a config file, if not provided will use defaults
-  -h, --help             Print help information
-  -V, --version          Print version information
+  -u, --use-anki-connect  Use AnkiConnect, if not provided will generate a CSV output
+      --config <CONFIG>   The path to a config file, if not provided will use defaults
+  -h, --help              Print help
+  -V, --version           Print version
 ```
 
 ## Configuration
