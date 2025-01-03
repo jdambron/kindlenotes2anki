@@ -3,6 +3,7 @@ use crate::Note;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
 const SEPARATOR: &str = "==========";
 
@@ -58,18 +59,33 @@ fn parse_note(lines: &[String]) -> Option<Note> {
 
 fn is_empty_or_useless_line(line: &str) -> bool {
     line.is_empty()
-        || line.starts_with(HIGHLIGHT_VALUE.as_str())
-        || line.starts_with(BOOKMARK_VALUE.as_str())
-        || line.starts_with(NOTE_VALUE.as_str())
+        || line.starts_with(highlight_value().as_str())
+        || line.starts_with(bookmark_value().as_str())
+        || line.starts_with(note_value().as_str())
 }
 
-lazy_static::lazy_static! {
-    static ref HIGHLIGHT_VALUE: String = AppConfig::get::<String>("parser.highlight")
-        .expect("Failed to load 'highlight' value from config. Please check your config file.");
-    static ref BOOKMARK_VALUE: String = AppConfig::get::<String>("parser.bookmark")
-        .expect("Failed to load 'bookmark' value from config. Please check your config file.");
-    static ref NOTE_VALUE: String = AppConfig::get::<String>("parser.note")
-        .expect("Failed to load 'note' value from config. Please check your config file.");
+fn highlight_value() -> &'static String {
+    static HIGHLIGHT_VALUE: OnceLock<String> = OnceLock::new();
+    HIGHLIGHT_VALUE.get_or_init(|| {
+        AppConfig::get::<String>("parser.highlight")
+            .expect("Failed to load 'highlight' value from config. Please check your config file.")
+    })
+}
+
+fn bookmark_value() -> &'static String {
+    static BOOKMARK_VALUE: OnceLock<String> = OnceLock::new();
+    BOOKMARK_VALUE.get_or_init(|| {
+        AppConfig::get::<String>("parser.bookmark")
+            .expect("Failed to load 'bookmark' value from config. Please check your config file.")
+    })
+}
+
+fn note_value() -> &'static String {
+    static NOTE_VALUE: OnceLock<String> = OnceLock::new();
+    NOTE_VALUE.get_or_init(|| {
+        AppConfig::get::<String>("parser.note")
+            .expect("Failed to load 'note' value from config. Please check your config file.")
+    })
 }
 
 #[cfg(test)]

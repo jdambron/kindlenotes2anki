@@ -2,14 +2,14 @@ extern crate config;
 
 use anyhow::{Context, Result};
 use config::{Config, File};
-use lazy_static::lazy_static;
 use serde::Deserialize;
 use std::error::Error;
 use std::path::PathBuf;
-use std::sync::RwLock;
+use std::sync::{OnceLock, RwLock};
 
-lazy_static! {
-    static ref CONFIG: RwLock<Config> = RwLock::new(Config::default());
+fn app_config() -> &'static RwLock<Config> {
+    static CONFIG: OnceLock<RwLock<Config>> = OnceLock::new();
+    CONFIG.get_or_init(|| RwLock::new(Config::default()))
 }
 
 #[derive(Deserialize)]
@@ -27,7 +27,7 @@ impl AppConfig {
         let settings = builder.build().context("Failed to load config file")?;
         // Save Config to RwLoc
         {
-            let mut w = CONFIG.write()?;
+            let mut w = app_config().write()?;
             *w = settings;
         }
         Ok(())
@@ -38,7 +38,7 @@ impl AppConfig {
     where
         T: serde::Deserialize<'de>,
     {
-        Ok(CONFIG.read()?.get::<T>(key)?)
+        Ok(app_config().read()?.get::<T>(key)?)
     }
 }
 
