@@ -1,11 +1,13 @@
 use crate::app_config::AppConfig;
 use crate::Note;
+use regex::{escape, RegexSet};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
 const SEPARATOR: &str = "==========";
+static USELESS_REGEX_SET: OnceLock<RegexSet> = OnceLock::new();
 
 pub fn parse_clippings(filename: PathBuf) -> Result<Vec<Note>, std::io::Error> {
     let file = File::open(filename)?;
@@ -42,26 +44,49 @@ fn parse_note(lines: &[String]) -> Option<Note> {
         return None;
     }
 
-    let title = lines[0].trim().to_string();
-    let tidied_note: String = lines[1..]
-        .iter()
-        .filter(|l| !is_empty_or_useless_line(l))
-        .cloned()
-        .collect::<Vec<String>>()
-        .join("\n");
+    let title = lines[0].trim();
+    if is_empty_or_useless_line(title) {
+        return None;
+    }
 
-    if is_empty_or_useless_line(&title) || is_empty_or_useless_line(&tidied_note) {
+    let mut tidied_note = String::with_capacity(lines.len() * 20);
+    let mut is_first_line = true;
+
+    for line in &lines[1..] {
+        if !is_empty_or_useless_line(line) {
+            if !is_first_line {
+                tidied_note.push('\n');
+            }
+            tidied_note.push_str(line);
+            is_first_line = false;
+        }
+    }
+
+    if tidied_note.is_empty() {
         None
     } else {
-        Some(Note { title, tidied_note })
+        Some(Note {
+            title: title.to_owned(),
+            tidied_note,
+        })
     }
 }
 
 fn is_empty_or_useless_line(line: &str) -> bool {
-    line.is_empty()
-        || line.starts_with(highlight_value().as_str())
-        || line.starts_with(bookmark_value().as_str())
-        || line.starts_with(note_value().as_str())
+    if line.is_empty() {
+        return true;
+    }
+
+    let regex_set = USELESS_REGEX_SET.get_or_init(|| {
+        let patterns = [
+            format!("^{}", escape(highlight_value())),
+            format!("^{}", escape(bookmark_value())),
+            format!("^{}", escape(note_value())),
+        ];
+        RegexSet::new(patterns).expect("Invalid regex pattern")
+    });
+
+    regex_set.is_match(line)
 }
 
 fn highlight_value() -> &'static String {
