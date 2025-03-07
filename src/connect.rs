@@ -1,4 +1,4 @@
-use anyhow::{bail, Ok, Result};
+use anyhow::{Ok, Result, bail};
 use serde::{Deserialize, Serialize};
 
 const DECK_NAME: &str = "Kindle";

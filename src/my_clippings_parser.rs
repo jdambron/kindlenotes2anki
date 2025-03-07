@@ -1,6 +1,6 @@
-use crate::app_config::AppConfig;
 use crate::Note;
-use regex::{escape, RegexSet};
+use crate::app_config::AppConfig;
+use regex::{RegexSet, escape};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
@@ -138,7 +138,9 @@ mod tests {
     #[serial]
     fn surlignement_is_useless() {
         setup();
-        assert!(is_empty_or_useless_line("- Votre surlignement Emplacement 1212-1214 | Ajouté le samedi 20 octobre 2018 à 12:55:45"));
+        assert!(is_empty_or_useless_line(
+            "- Votre surlignement Emplacement 1212-1214 | Ajouté le samedi 20 octobre 2018 à 12:55:45"
+        ));
     }
 
     #[test]
