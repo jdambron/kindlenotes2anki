@@ -30,10 +30,10 @@ pub fn parse_clippings(filename: PathBuf) -> Result<Vec<Note>, std::io::Error> {
     }
 
     // Handle the last note
-    if !current_note.is_empty() {
-        if let Some(note) = parse_note(&current_note) {
-            notes.push(note);
-        }
+    if !current_note.is_empty()
+        && let Some(note) = parse_note(&current_note)
+    {
+        notes.push(note);
     }
 
     Ok(notes)
