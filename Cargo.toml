@@ -1,6 +1,6 @@
 [package]
 name = "kindlenotes2anki"
-version = "0.12.9"
+version = "0.12.10"
 authors = ["jdambron"]
 description = "A tool to import kindle clippings file to Anki"
 edition = "2024"
