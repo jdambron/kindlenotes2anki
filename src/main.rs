@@ -3,6 +3,7 @@ mod connect;
 mod csv_writer;
 mod my_clippings_parser;
 use anyhow::{Context, Result};
+use app_config::AppConfig;
 use clap::Parser;
 use std::path::PathBuf;
 
@@ -30,9 +31,8 @@ pub struct Note {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::parse();
-    app_config::AppConfig::init(args.config)
-        .map_err(|e| anyhow::anyhow!("Failed to initialize app config: {e}"))?;
-    let notes = my_clippings_parser::parse_clippings(args.clippings)
+    let config = AppConfig::new(args.config).context("Failed to initialize app config")?;
+    let notes = my_clippings_parser::parse_clippings(args.clippings, &config)
         .context("Failed to parse clippings")?;
     if args.use_anki_connect {
         // Now we .await the future
