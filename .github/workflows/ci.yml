@@ -40,6 +40,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt
       - name: Run fmt
         run: cargo fmt --all -- --check
 
