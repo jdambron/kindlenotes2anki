@@ -27,14 +27,18 @@ pub struct Note {
     tidied_note: String,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::parse();
     app_config::AppConfig::init(args.config)
         .map_err(|e| anyhow::anyhow!("Failed to initialize app config: {e}"))?;
     let notes = my_clippings_parser::parse_clippings(args.clippings)
         .context("Failed to parse clippings")?;
     if args.use_anki_connect {
-        connect::write_notes_ankiconnect(notes).context("Failed to send notes to AnkiConnect")?;
+        // Now we .await the future
+        connect::write_notes_ankiconnect(notes)
+            .await
+            .context("Failed to send notes to AnkiConnect")?;
     } else {
         csv_writer::write_csv(notes).context("Failed to write notes to CSV")?;
     }

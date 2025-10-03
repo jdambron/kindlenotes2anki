@@ -47,7 +47,6 @@ struct Options {
     duplicate_scope: String,
 }
 
-#[tokio::main]
 async fn add_notes(notes: Vec<crate::Note>) -> Result<()> {
     let notes_count: usize = notes.len();
     let mut req = AddNotes {
@@ -93,7 +92,7 @@ fn fill_note_api_params(note: crate::Note) -> Note {
     }
 }
 
-pub fn write_notes_ankiconnect(notes: Vec<crate::Note>) -> Result<()> {
-    add_notes(notes)?;
+pub async fn write_notes_ankiconnect(notes: Vec<crate::Note>) -> Result<()> {
+    add_notes(notes).await?; // .await the future from add_notes
     Ok(())
 }
