@@ -1,14 +1,14 @@
 [package]
 name = "kindlenotes2anki"
-version = "0.13.3"
+version = "0.13.4"
 authors = ["jdambron"]
 description = "A tool to import kindle clippings file to Anki"
 edition = "2024"
 
 [dependencies]
 anyhow = "1.0.100"
-clap = { version = "4.5.51", features = ["derive"] }
-config = { version = "0.15.18", features = ["toml"] }
+clap = { version = "4.5.53", features = ["derive"] }
+config = { version = "0.15.19", features = ["toml"] }
 csv = "1.4.0"
 regex = "1.12.2"
 reqwest = { version = "0.12.24", default-features = false, features = ["json"] }
