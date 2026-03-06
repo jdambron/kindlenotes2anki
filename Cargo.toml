@@ -1,6 +1,6 @@
 [package]
 name = "kindlenotes2anki"
-version = "0.13.9"
+version = "0.13.10"
 authors = ["jdambron"]
 description = "A tool to import kindle clippings file to Anki"
 edition = "2024"
@@ -13,7 +13,7 @@ csv = "1.4.0"
 regex = "1.12.3"
 reqwest = { version = "0.13.2", default-features = false, features = ["json"] }
 serde = { version = "1.0.228", features = ["derive"] }
-tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.50.0", features = ["macros", "rt-multi-thread"] }
 
 [dev-dependencies]
 tempfile = "3.26.0"
