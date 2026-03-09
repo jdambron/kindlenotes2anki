@@ -1,5 +1,3 @@
-extern crate config;
-
 use anyhow::Result;
 use config::{Config, File};
 use serde::Deserialize;
