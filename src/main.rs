@@ -2,6 +2,7 @@ mod app_config;
 mod connect;
 mod csv_writer;
 mod my_clippings_parser;
+mod note;
 use anyhow::{Context, Result};
 use app_config::AppConfig;
 use clap::Parser;
@@ -20,23 +21,14 @@ struct Cli {
     config: Option<PathBuf>,
 }
 
-/// Representation of a note
-pub struct Note {
-    /// Title of the book
-    title: String,
-    /// Tidied content of the note
-    tidied_note: String,
-}
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<()> {
     let args = Cli::parse();
     let config = AppConfig::new(args.config).context("Failed to initialize app config")?;
-    let notes = my_clippings_parser::parse_clippings(args.clippings, &config)
+    let notes = my_clippings_parser::parse_clippings(&args.clippings, &config)
         .context("Failed to parse clippings")?;
     if args.use_anki_connect {
-        // Now we .await the future
-        connect::write_notes_ankiconnect(notes)
+        connect::add_notes(notes)
             .await
             .context("Failed to send notes to AnkiConnect")?;
     } else {

@@ -1,4 +1,4 @@
-use crate::Note;
+use crate::note::Note;
 use anyhow::Result;
 use std::io;
 

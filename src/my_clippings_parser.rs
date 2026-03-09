@@ -1,5 +1,6 @@
-use crate::Note;
 use crate::app_config::AppConfig;
+use crate::note::Note;
+use anyhow::{Context, Result};
 use regex::{RegexSet, escape};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -7,8 +8,9 @@ use std::path::PathBuf;
 
 const SEPARATOR: &str = "==========";
 
-pub fn parse_clippings(filename: PathBuf, config: &AppConfig) -> Result<Vec<Note>, std::io::Error> {
-    let file = File::open(filename)?;
+pub fn parse_clippings(filename: &PathBuf, config: &AppConfig) -> Result<Vec<Note>> {
+    let file = File::open(filename)
+        .with_context(|| format!("Failed to open clippings file: {}", filename.display()))?;
     let reader = BufReader::new(file);
     let mut notes = Vec::with_capacity(100);
     let mut current_note = Vec::with_capacity(10);
@@ -19,7 +21,7 @@ pub fn parse_clippings(filename: PathBuf, config: &AppConfig) -> Result<Vec<Note
         format!("^{}", escape(&config.parser.bookmark)),
         format!("^{}", escape(&config.parser.note)),
     ])
-    .expect("Invalid regex pattern");
+    .context("Invalid regex pattern in config")?;
 
     for line in reader.lines() {
         let line = line?;
@@ -55,18 +57,12 @@ fn parse_note(lines: &[String], useless_regex_set: &RegexSet) -> Option<Note> {
         return None;
     }
 
-    let mut tidied_note = String::with_capacity(lines.len() * 20);
-    let mut is_first_line = true;
-
-    for line in &lines[1..] {
-        if !is_empty_or_useless_line(line, useless_regex_set) {
-            if !is_first_line {
-                tidied_note.push('\n');
-            }
-            tidied_note.push_str(line);
-            is_first_line = false;
-        }
-    }
+    let tidied_note: String = lines[1..]
+        .iter()
+        .filter(|l| !is_empty_or_useless_line(l, useless_regex_set))
+        .cloned()
+        .collect::<Vec<_>>()
+        .join("\n");
 
     if tidied_note.is_empty() {
         None
@@ -116,7 +112,7 @@ mod tests {
         std::fs::File::create(&file_path).expect("Failed to create temporary file.");
 
         // Pass the config to the function
-        let notes = parse_clippings(file_path, &config).expect("Failed to parse temporary file.");
+        let notes = parse_clippings(&file_path, &config).expect("Failed to parse temporary file.");
         assert!(notes.is_empty());
     }
 

@@ -1,8 +1,10 @@
+use crate::note::Note as AppNote;
 use anyhow::{Ok, Result, bail};
 use serde::{Deserialize, Serialize};
 
 const DECK_NAME: &str = "Kindle";
 const MODEL_NAME: &str = "Basique";
+const DUPLICATE_SCOPE: &str = "deck";
 
 #[derive(Deserialize)]
 struct ApiResponse {
@@ -19,7 +21,7 @@ struct AddNotes {
 }
 
 #[derive(Serialize)]
-#[serde(rename = "camelCase")]
+#[serde(rename_all = "camelCase")]
 struct Notes {
     notes: Vec<Note>,
 }
@@ -47,15 +49,15 @@ struct Options {
     duplicate_scope: String,
 }
 
-async fn add_notes(notes: Vec<crate::Note>) -> Result<()> {
+pub async fn add_notes(notes: Vec<AppNote>) -> Result<()> {
     let notes_count: usize = notes.len();
-    let mut req = AddNotes {
+    let req = AddNotes {
         action: "addNotes".to_string(),
         version: 6,
-        params: Notes { notes: Vec::new() },
+        params: Notes {
+            notes: notes.into_iter().map(fill_note_api_params).collect(),
+        },
     };
-    let notes_params = notes.into_iter().map(fill_note_api_params).collect();
-    req.params.notes = notes_params;
     let client = reqwest::Client::new();
     let response = client
         .post("http://localhost:8765")
@@ -76,7 +78,7 @@ async fn add_notes(notes: Vec<crate::Note>) -> Result<()> {
     }
 }
 
-fn fill_note_api_params(note: crate::Note) -> Note {
+fn fill_note_api_params(note: AppNote) -> Note {
     let fields = Fields {
         recto: note.title,
         verso: note.tidied_note,
@@ -87,12 +89,7 @@ fn fill_note_api_params(note: crate::Note) -> Note {
         fields,
         options: Options {
             allow_duplicate: true,
-            duplicate_scope: "deck".to_string(),
+            duplicate_scope: DUPLICATE_SCOPE.to_string(),
         },
     }
-}
-
-pub async fn write_notes_ankiconnect(notes: Vec<crate::Note>) -> Result<()> {
-    add_notes(notes).await?; // .await the future from add_notes
-    Ok(())
 }
