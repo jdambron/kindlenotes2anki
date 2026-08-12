@@ -56,12 +56,16 @@ fn parse_note(lines: &[String], prefixes: &ParserConfig) -> Option<Note> {
         return None;
     }
 
-    let mut tidied_note: String = lines[1..]
-        .iter()
-        .filter(|l| !is_empty_or_useless_line(l, prefixes))
-        .cloned()
-        .collect::<Vec<_>>()
-        .join("\n");
+    let mut tidied_note = String::new();
+    for line in &lines[1..] {
+        if is_empty_or_useless_line(line, prefixes) {
+            continue;
+        }
+        if !tidied_note.is_empty() {
+            tidied_note.push('\n');
+        }
+        tidied_note.push_str(line);
+    }
 
     // Kindle clipping-limit notices terminate whatever they were injected
     // into: cut everything from the first ignored marker onward.

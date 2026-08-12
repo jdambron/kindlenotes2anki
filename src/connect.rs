@@ -16,32 +16,32 @@ struct ApiResponse {
 
 #[derive(Serialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-struct AddNotes {
-    action: String,
+struct AddNotes<'a> {
+    action: &'a str,
     version: usize,
-    params: Notes,
+    params: Notes<'a>,
 }
 
 #[derive(Serialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-struct Notes {
-    notes: Vec<Note>,
+struct Notes<'a> {
+    notes: Vec<Note<'a>>,
 }
 
 #[derive(Serialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-struct Note {
-    deck_name: String,
-    model_name: String,
-    fields: BTreeMap<String, String>,
-    options: Options,
+struct Note<'a> {
+    deck_name: &'a str,
+    model_name: &'a str,
+    fields: BTreeMap<&'a str, &'a str>,
+    options: Options<'a>,
 }
 
 #[derive(Serialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-struct Options {
+struct Options<'a> {
     allow_duplicate: bool,
-    duplicate_scope: String,
+    duplicate_scope: &'a str,
 }
 
 pub fn add_notes(notes: &[AppNote], config: &AnkiConfig) -> Result<usize> {
@@ -88,9 +88,9 @@ pub fn add_notes(notes: &[AppNote], config: &AnkiConfig) -> Result<usize> {
     }
 }
 
-fn build_add_notes_request(notes: &[AppNote], config: &AnkiConfig) -> AddNotes {
+fn build_add_notes_request<'a>(notes: &'a [AppNote], config: &'a AnkiConfig) -> AddNotes<'a> {
     AddNotes {
-        action: "addNotes".to_string(),
+        action: "addNotes",
         version: 6,
         params: Notes {
             notes: notes
@@ -101,17 +101,17 @@ fn build_add_notes_request(notes: &[AppNote], config: &AnkiConfig) -> AddNotes {
     }
 }
 
-fn fill_note_api_params(note: &AppNote, config: &AnkiConfig) -> Note {
+fn fill_note_api_params<'a>(note: &'a AppNote, config: &'a AnkiConfig) -> Note<'a> {
     let mut fields = BTreeMap::new();
-    fields.insert(config.front_field.clone(), note.title.clone());
-    fields.insert(config.back_field.clone(), note.tidied_note.clone());
+    fields.insert(config.front_field.as_str(), note.title.as_str());
+    fields.insert(config.back_field.as_str(), note.tidied_note.as_str());
     Note {
-        deck_name: config.deck.clone(),
-        model_name: config.model.clone(),
+        deck_name: &config.deck,
+        model_name: &config.model,
         fields,
         options: Options {
             allow_duplicate: true,
-            duplicate_scope: DUPLICATE_SCOPE.to_string(),
+            duplicate_scope: DUPLICATE_SCOPE,
         },
     }
 }
@@ -207,7 +207,8 @@ mod tests {
             back_field: "Back".to_owned(),
             url: "http://localhost:8765".to_owned(),
         };
-        let req = build_add_notes_request(&sample_notes(), &config);
+        let notes = sample_notes();
+        let req = build_add_notes_request(&notes, &config);
 
         assert_eq!(req.action, "addNotes");
         assert_eq!(req.version, 6);
@@ -215,15 +216,15 @@ mod tests {
         assert_eq!(req.params.notes[0].deck_name, "Clippings");
         assert_eq!(req.params.notes[0].model_name, "Basic");
         assert_eq!(
-            req.params.notes[0].fields.get("Front").map(String::as_str),
+            req.params.notes[0].fields.get("Front").copied(),
             Some("Book A")
         );
         assert_eq!(
-            req.params.notes[0].fields.get("Back").map(String::as_str),
+            req.params.notes[0].fields.get("Back").copied(),
             Some("Highlight 1")
         );
         assert_eq!(
-            req.params.notes[1].fields.get("Back").map(String::as_str),
+            req.params.notes[1].fields.get("Back").copied(),
             Some("Highlight 2")
         );
         assert!(req.params.notes[0].options.allow_duplicate);
