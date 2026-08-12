@@ -72,6 +72,7 @@ jobs:
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
+      # Binaries are already stripped via profile.release in Cargo.toml
       - name: Stage artifact
         shell: bash
         run: |
@@ -79,9 +80,6 @@ jobs:
           src="target/${{ matrix.target }}/release/${{ matrix.bin }}"
           dst="dist/${{ matrix.asset }}"
           cp "$src" "$dst"
-          if [[ "${{ runner.os }}" != "Windows" ]]; then
-            strip "$dst" || true
-          fi
 
       - uses: actions/upload-artifact@v7
         with:
