@@ -21,16 +21,13 @@ struct Cli {
     config: Option<PathBuf>,
 }
 
-#[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     let args = Cli::parse();
     let config = AppConfig::new(args.config).context("Failed to initialize app config")?;
     let notes = my_clippings_parser::parse_clippings(&args.clippings, &config)
         .context("Failed to parse clippings")?;
     if args.use_anki_connect {
-        connect::add_notes(notes)
-            .await
-            .context("Failed to send notes to AnkiConnect")?;
+        connect::add_notes(notes).context("Failed to send notes to AnkiConnect")?;
     } else {
         csv_writer::write_csv(notes).context("Failed to write notes to CSV")?;
     }

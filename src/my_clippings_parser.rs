@@ -1,7 +1,6 @@
-use crate::app_config::AppConfig;
+use crate::app_config::{AppConfig, ParserConfig};
 use crate::note::Note;
 use anyhow::{Context, Result};
-use regex::{RegexSet, escape};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
@@ -14,21 +13,13 @@ pub fn parse_clippings(filename: &PathBuf, config: &AppConfig) -> Result<Vec<Not
     let reader = BufReader::new(file);
     let mut notes = Vec::with_capacity(100);
     let mut current_note = Vec::with_capacity(10);
-
-    // Create the regex set from the passed-in config
-    let useless_regex_set = RegexSet::new(&[
-        format!("^{}", escape(&config.parser.highlight)),
-        format!("^{}", escape(&config.parser.bookmark)),
-        format!("^{}", escape(&config.parser.note)),
-    ])
-    .context("Invalid regex pattern in config")?;
+    let prefixes = &config.parser;
 
     for line in reader.lines() {
         let line = line?;
         if line.starts_with(SEPARATOR) {
             if !current_note.is_empty() {
-                // Pass the regex set to the parsing function
-                if let Some(note) = parse_note(&current_note, &useless_regex_set) {
+                if let Some(note) = parse_note(&current_note, prefixes) {
                     notes.push(note);
                 }
                 current_note.clear();
@@ -39,7 +30,7 @@ pub fn parse_clippings(filename: &PathBuf, config: &AppConfig) -> Result<Vec<Not
     }
 
     if !current_note.is_empty()
-        && let Some(note) = parse_note(&current_note, &useless_regex_set)
+        && let Some(note) = parse_note(&current_note, prefixes)
     {
         notes.push(note);
     }
@@ -47,19 +38,19 @@ pub fn parse_clippings(filename: &PathBuf, config: &AppConfig) -> Result<Vec<Not
     Ok(notes)
 }
 
-fn parse_note(lines: &[String], useless_regex_set: &RegexSet) -> Option<Note> {
+fn parse_note(lines: &[String], prefixes: &ParserConfig) -> Option<Note> {
     if lines.is_empty() {
         return None;
     }
 
     let title = lines[0].trim();
-    if is_empty_or_useless_line(title, useless_regex_set) {
+    if is_empty_or_useless_line(title, prefixes) {
         return None;
     }
 
     let tidied_note: String = lines[1..]
         .iter()
-        .filter(|l| !is_empty_or_useless_line(l, useless_regex_set))
+        .filter(|l| !is_empty_or_useless_line(l, prefixes))
         .cloned()
         .collect::<Vec<_>>()
         .join("\n");
@@ -74,44 +65,31 @@ fn parse_note(lines: &[String], useless_regex_set: &RegexSet) -> Option<Note> {
     }
 }
 
-fn is_empty_or_useless_line(line: &str, useless_regex_set: &RegexSet) -> bool {
-    if line.is_empty() {
-        return true;
-    }
-    useless_regex_set.is_match(line)
+fn is_empty_or_useless_line(line: &str, prefixes: &ParserConfig) -> bool {
+    line.is_empty()
+        || line.starts_with(&prefixes.highlight)
+        || line.starts_with(&prefixes.bookmark)
+        || line.starts_with(&prefixes.note)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::app_config::AppConfig;
-    use regex::RegexSet;
     use std::path::PathBuf;
     use tempfile::tempdir;
 
-    // Helper function to load the test configuration for most tests.
     fn setup_test_config() -> AppConfig {
         AppConfig::new(Some(PathBuf::from("src/resources/test_config.toml"))).unwrap()
     }
 
-    // Helper to create the RegexSet based on a given config.
-    fn create_useless_regex_set(config: &AppConfig) -> RegexSet {
-        RegexSet::new(&[
-            format!("^{}", escape(&config.parser.highlight)),
-            format!("^{}", escape(&config.parser.bookmark)),
-            format!("^{}", escape(&config.parser.note)),
-        ])
-        .unwrap()
-    }
-
     #[test]
     fn test_parse_clippings_empty() {
-        let config = setup_test_config(); // Load config for the test
+        let config = setup_test_config();
         let temp_dir = tempdir().expect("Failed to create temporary directory.");
         let file_path = temp_dir.path().join("test_clippings.txt");
         std::fs::File::create(&file_path).expect("Failed to create temporary file.");
 
-        // Pass the config to the function
         let notes = parse_clippings(&file_path, &config).expect("Failed to parse temporary file.");
         assert!(notes.is_empty());
     }
@@ -119,54 +97,48 @@ mod tests {
     #[test]
     fn surlignement_is_useless() {
         let config = setup_test_config();
-        let regex_set = create_useless_regex_set(&config);
         assert!(is_empty_or_useless_line(
             "- Votre surlignement Emplacement 1212-1214 | Ajouté le samedi 20 octobre 2018 à 12:55:45",
-            &regex_set
+            &config.parser
         ));
     }
 
     #[test]
     fn signet_is_useless() {
         let config = setup_test_config();
-        let regex_set = create_useless_regex_set(&config);
         assert!(is_empty_or_useless_line(
             "- Votre signet Emplacement 5527 | Ajouté le vendredi 16 novembre 2018 à 11:51:19",
-            &regex_set
+            &config.parser
         ));
     }
 
     #[test]
     fn note_is_useless() {
         let config = setup_test_config();
-        let regex_set = create_useless_regex_set(&config);
         assert!(is_empty_or_useless_line(
             "- Votre note Emplacement 3752 | Ajoutée le vendredi 16 novembre 2018 à 13:51:19",
-            &regex_set
+            &config.parser
         ));
     }
 
     #[test]
     fn empty_is_useless() {
         let config = setup_test_config();
-        let regex_set = create_useless_regex_set(&config);
-        assert!(is_empty_or_useless_line("", &regex_set));
+        assert!(is_empty_or_useless_line("", &config.parser));
     }
 
     #[test]
     fn highlight_is_useful() {
         let config = setup_test_config();
-        let regex_set = create_useless_regex_set(&config);
         assert!(!is_empty_or_useless_line(
             "A standard fake highlight",
-            &regex_set
+            &config.parser
         ));
     }
 
     #[test]
     fn test_parse_note() {
         let config = setup_test_config();
-        let regex_set = create_useless_regex_set(&config);
         let fake_note = vec![
             "A fake title (Last, First)".to_string(),
             "- Votre surlignement Emplacement 3592-3592 | Ajouté le mardi 6 novembre 2018 à 08:50:39"
@@ -175,7 +147,7 @@ mod tests {
             "This is a fake highlight.".to_string(),
         ];
 
-        if let Some(read_note) = parse_note(&fake_note, &regex_set) {
+        if let Some(read_note) = parse_note(&fake_note, &config.parser) {
             assert_eq!(read_note.title, "A fake title (Last, First)");
             assert_eq!(read_note.tidied_note, "This is a fake highlight.");
         } else {

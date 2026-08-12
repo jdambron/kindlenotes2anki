@@ -1,5 +1,5 @@
 use crate::note::Note as AppNote;
-use anyhow::{Ok, Result, bail};
+use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 
 const DECK_NAME: &str = "Kindle";
@@ -49,7 +49,7 @@ struct Options {
     duplicate_scope: String,
 }
 
-pub async fn add_notes(notes: Vec<AppNote>) -> Result<()> {
+pub fn add_notes(notes: Vec<AppNote>) -> Result<()> {
     let notes_count: usize = notes.len();
     let req = AddNotes {
         action: "addNotes".to_string(),
@@ -58,14 +58,10 @@ pub async fn add_notes(notes: Vec<AppNote>) -> Result<()> {
             notes: notes.into_iter().map(fill_note_api_params).collect(),
         },
     };
-    let client = reqwest::Client::new();
-    let response = client
-        .post("http://localhost:8765")
-        .json(&req)
-        .send()
-        .await?
-        .json::<ApiResponse>()
-        .await?;
+    let response: ApiResponse = ureq::post("http://localhost:8765")
+        .send_json(&req)?
+        .body_mut()
+        .read_json()?;
     match response.error {
         Some(error) => bail!(error),
         None => {
