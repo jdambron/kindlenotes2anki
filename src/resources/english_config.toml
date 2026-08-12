@@ -1,4 +1,12 @@
+# English My Clippings.txt + English Anki note type
 [parser]
 bookmark = "- Your Bookmark"
 highlight = "- Your Highlight"
 note = "- Your Note"
+
+[anki]
+deck = "Kindle"
+model = "Basic"
+front_field = "Front"
+back_field = "Back"
+url = "http://localhost:8765"

@@ -1,0 +1,14 @@
+Livre Exemple (Auteur, A)
+- Votre surlignement Emplacement 10-11 | Ajouté le lundi 1 janvier 2020 à 10:00:00
+
+Premier surlignement.
+==========
+Livre Exemple (Auteur, A)
+- Votre surlignement Emplacement 20-21 | Ajouté le lundi 1 janvier 2020 à 10:05:00
+
+Deuxième surlignement.
+==========
+Livre Exemple (Auteur, A)
+- Votre signet Emplacement 30 | Ajouté le lundi 1 janvier 2020 à 10:10:00
+
+==========

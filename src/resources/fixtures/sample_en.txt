@@ -1,0 +1,10 @@
+Example Book (Author, A)
+- Your Highlight on page 10 | location 100-101 | Added on Monday, January 1, 2020 10:00:00 AM
+
+First highlight.
+==========
+Example Book (Author, A)
+- Your Highlight on page 20 | location 200-201 | Added on Monday, January 1, 2020 10:05:00 AM
+
+Second highlight.
+==========

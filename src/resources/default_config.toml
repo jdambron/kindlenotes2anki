@@ -1,5 +1,12 @@
-# Default config file: for a My Clippings.txt file in French
+# Default config: French My Clippings.txt + French Anki note type
 [parser]
 bookmark = "- Votre signet"
 highlight = "- Votre surlignement"
 note = "- Votre note"
+
+[anki]
+deck = "Kindle"
+model = "Basique"
+front_field = "Recto"
+back_field = "Verso"
+url = "http://localhost:8765"

@@ -1,9 +1,9 @@
+use crate::app_config::AnkiConfig;
 use crate::note::Note as AppNote;
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
-const DECK_NAME: &str = "Kindle";
-const MODEL_NAME: &str = "Basique";
 const DUPLICATE_SCOPE: &str = "deck";
 
 #[derive(Deserialize)]
@@ -12,7 +12,7 @@ struct ApiResponse {
     error: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 struct AddNotes {
     action: String,
@@ -20,72 +20,216 @@ struct AddNotes {
     params: Notes,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 struct Notes {
     notes: Vec<Note>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 struct Note {
     deck_name: String,
     model_name: String,
-    fields: Fields,
+    fields: BTreeMap<String, String>,
     options: Options,
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "PascalCase")]
-struct Fields {
-    recto: String,
-    verso: String,
-}
-
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 struct Options {
     allow_duplicate: bool,
     duplicate_scope: String,
 }
 
-pub fn add_notes(notes: Vec<AppNote>) -> Result<()> {
-    let notes_count: usize = notes.len();
-    let req = AddNotes {
-        action: "addNotes".to_string(),
-        version: 6,
-        params: Notes {
-            notes: notes.into_iter().map(fill_note_api_params).collect(),
-        },
-    };
-    let response: ApiResponse = ureq::post("http://localhost:8765")
-        .send_json(&req)?
+pub fn add_notes(notes: &[AppNote], config: &AnkiConfig) -> Result<usize> {
+    let notes_count = notes.len();
+    let req = build_add_notes_request(notes, config);
+    let response: ApiResponse = ureq::post(&config.url)
+        .send_json(&req)
+        .with_context(|| {
+            format!(
+                "Failed to connect to AnkiConnect at {}. Is Anki running with the AnkiConnect add-on?",
+                config.url
+            )
+        })?
         .body_mut()
-        .read_json()?;
-    match response.error {
-        Some(error) => bail!(error),
-        None => {
-            if response.result.into_iter().flatten().count() == notes_count {
-                Ok(())
-            } else {
-                bail!("Some notes could not be created");
-            }
-        }
+        .read_json()
+        .context("Failed to parse AnkiConnect response")?;
+
+    if let Some(error) = response.error {
+        bail!(error);
+    }
+    let created = response.result.into_iter().flatten().count();
+    if created == notes_count {
+        Ok(created)
+    } else {
+        bail!("Some notes could not be created ({created}/{notes_count} succeeded)");
     }
 }
 
-fn fill_note_api_params(note: AppNote) -> Note {
-    let fields = Fields {
-        recto: note.title,
-        verso: note.tidied_note,
-    };
+fn build_add_notes_request(notes: &[AppNote], config: &AnkiConfig) -> AddNotes {
+    AddNotes {
+        action: "addNotes".to_string(),
+        version: 6,
+        params: Notes {
+            notes: notes
+                .iter()
+                .map(|note| fill_note_api_params(note, config))
+                .collect(),
+        },
+    }
+}
+
+fn fill_note_api_params(note: &AppNote, config: &AnkiConfig) -> Note {
+    let mut fields = BTreeMap::new();
+    fields.insert(config.front_field.clone(), note.title.clone());
+    fields.insert(config.back_field.clone(), note.tidied_note.clone());
     Note {
-        deck_name: DECK_NAME.to_string(),
-        model_name: MODEL_NAME.to_string(),
+        deck_name: config.deck.clone(),
+        model_name: config.model.clone(),
         fields,
         options: Options {
             allow_duplicate: true,
             duplicate_scope: DUPLICATE_SCOPE.to_string(),
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::note::Note as AppNote;
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::thread;
+    use std::time::Duration;
+
+    fn sample_notes() -> Vec<AppNote> {
+        vec![
+            AppNote {
+                title: "Book A".to_owned(),
+                tidied_note: "Highlight 1".to_owned(),
+            },
+            AppNote {
+                title: "Book A".to_owned(),
+                tidied_note: "Highlight 2".to_owned(),
+            },
+        ]
+    }
+
+    fn read_http_request(stream: &mut impl Read) -> String {
+        let mut buf = Vec::new();
+        let mut chunk = [0_u8; 4096];
+        loop {
+            let n = stream.read(&mut chunk).unwrap_or(0);
+            if n == 0 {
+                break;
+            }
+            buf.extend_from_slice(&chunk[..n]);
+            if let Some(header_end) = buf.windows(4).position(|w| w == b"\r\n\r\n") {
+                let headers = std::str::from_utf8(&buf[..header_end]).unwrap_or("");
+                let content_length = headers.lines().find_map(|line| {
+                    let line = line.trim();
+                    line.to_ascii_lowercase()
+                        .strip_prefix("content-length:")
+                        .and_then(|v| v.trim().parse::<usize>().ok())
+                });
+                if let Some(len) = content_length {
+                    let total = header_end + 4 + len;
+                    while buf.len() < total {
+                        let n = stream.read(&mut chunk).unwrap_or(0);
+                        if n == 0 {
+                            break;
+                        }
+                        buf.extend_from_slice(&chunk[..n]);
+                    }
+                }
+                break;
+            }
+        }
+        String::from_utf8_lossy(&buf).into_owned()
+    }
+
+    fn spawn_json_server(response_body: &'static str) -> (String, thread::JoinHandle<String>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let handle = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            let request = read_http_request(&mut stream);
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                response_body.len(),
+                response_body
+            );
+            stream.write_all(response.as_bytes()).unwrap();
+            request
+        });
+        (format!("http://{addr}"), handle)
+    }
+
+    #[test]
+    fn build_request_uses_config_and_allows_duplicates() {
+        let config = AnkiConfig {
+            deck: "Clippings".to_owned(),
+            model: "Basic".to_owned(),
+            front_field: "Front".to_owned(),
+            back_field: "Back".to_owned(),
+            url: "http://localhost:8765".to_owned(),
+        };
+        let req = build_add_notes_request(&sample_notes(), &config);
+
+        assert_eq!(req.action, "addNotes");
+        assert_eq!(req.version, 6);
+        assert_eq!(req.params.notes.len(), 2);
+        assert_eq!(req.params.notes[0].deck_name, "Clippings");
+        assert_eq!(req.params.notes[0].model_name, "Basic");
+        assert_eq!(
+            req.params.notes[0].fields.get("Front").map(String::as_str),
+            Some("Book A")
+        );
+        assert_eq!(
+            req.params.notes[0].fields.get("Back").map(String::as_str),
+            Some("Highlight 1")
+        );
+        assert_eq!(
+            req.params.notes[1].fields.get("Back").map(String::as_str),
+            Some("Highlight 2")
+        );
+        assert!(req.params.notes[0].options.allow_duplicate);
+        assert_eq!(req.params.notes[0].options.duplicate_scope, "deck");
+    }
+
+    #[test]
+    fn add_notes_posts_to_configured_url() {
+        let (url, server) = spawn_json_server(r#"{"result":[1,2],"error":null}"#);
+        let config = AnkiConfig {
+            url,
+            ..AnkiConfig::default()
+        };
+        let created = add_notes(&sample_notes(), &config).unwrap();
+        assert_eq!(created, 2);
+        let request = server.join().unwrap();
+        assert!(request.starts_with("POST /"));
+        assert!(request.contains("addNotes"));
+        assert!(request.contains("allowDuplicate"));
+    }
+
+    #[test]
+    fn add_notes_reports_partial_failure() {
+        let (url, server) = spawn_json_server(r#"{"result":[1,null],"error":null}"#);
+        let config = AnkiConfig {
+            url,
+            ..AnkiConfig::default()
+        };
+        let err = add_notes(&sample_notes(), &config).unwrap_err();
+        assert!(
+            err.to_string().contains("1/2 succeeded"),
+            "unexpected error: {err}"
+        );
+        server.join().unwrap();
     }
 }

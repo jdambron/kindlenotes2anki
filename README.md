@@ -2,14 +2,14 @@
 
 [![Continuous integration](https://github.com/jdambron/kindlenotes2anki/actions/workflows/ci.yml/badge.svg)](https://github.com/jdambron/kindlenotes2anki/actions/workflows/ci.yml)
 
-A tool to import Kindle clippings file to [Anki](https://apps.ankiweb.net/)
+A tool to import Kindle clippings (`My Clippings.txt`) into [Anki](https://apps.ankiweb.net/).
 
-There are 2 modes :
+There are 2 modes:
 
-1. Generate a CSV output than can be imported into Anki (default)
-1. Direct import using [AnkiConnect](https://foosoft.net/projects/anki-connect/)
+1. Generate CSV output that can be imported into Anki (default)
+2. Direct import using [AnkiConnect](https://foosoft.net/projects/anki-connect/)
 
-⚠️ To be able to use the direct import, you must first install AnkiConnect and launch Anki.
+To use direct import, install the AnkiConnect add-on and launch Anki first.
 
 ## Disclaimer
 
@@ -18,27 +18,81 @@ So there are probably lots of things that can be improved.
 
 ## Build the project
 
-```Shell
+```shell
 cargo build --release
 ```
 
 ## Usage
 
-```
+```text
 A tool to import kindle clippings file to Anki
 
-Usage: kindlenotes2anki.exe [OPTIONS] <CLIPPINGS>
+Usage: kindlenotes2anki [OPTIONS] <CLIPPINGS>
 
 Arguments:
   <CLIPPINGS>  The path to the clippings txt file to read
 
 Options:
-  -u, --use-anki-connect  Use AnkiConnect, if not provided will generate a CSV output
-      --config <CONFIG>   The path to a config file, if not provided will use defaults
-  -h, --help              Print help
-  -V, --version           Print version
+  -u, --use-anki-connect     Use AnkiConnect, if not provided will generate a CSV output
+  -o, --output <PATH>        Write CSV to this file instead of stdout (ignored with --use-anki-connect)
+      --config <CONFIG>      The path to a config file, if not provided will use defaults
+  -h, --help                 Print help
+  -V, --version              Print version
 ```
+
+### Examples
+
+```shell
+# CSV to stdout (import manually in Anki)
+kindlenotes2anki "My Clippings.txt" > notes.csv
+
+# CSV to a file
+kindlenotes2anki -o notes.csv "My Clippings.txt"
+
+# Direct import via AnkiConnect (French Anki defaults)
+kindlenotes2anki -u "My Clippings.txt"
+
+# English clippings + English Anki note type
+kindlenotes2anki -u --config src/resources/english_config.toml "My Clippings.txt"
+```
+
+On success, a short summary is printed to stderr (for example `Exported 42 notes`), so it does not mix with CSV on stdout.
 
 ## Configuration
 
-You can adapt the configuration to your clippings file language customzing the configuration file.
+Defaults target a **French** `My Clippings.txt` and the French Anki note type (`Basique` with `Recto` / `Verso`).
+Customize language and Anki settings with a TOML config file:
+
+```toml
+[parser]
+bookmark = "- Votre signet"
+highlight = "- Votre surlignement"
+note = "- Votre note"
+
+[anki]
+deck = "Kindle"
+model = "Basique"
+front_field = "Recto"
+back_field = "Verso"
+url = "http://localhost:8765"
+```
+
+For English clippings and the default English Anki note type, see `src/resources/english_config.toml`:
+
+```toml
+[parser]
+bookmark = "- Your Bookmark"
+highlight = "- Your Highlight"
+note = "- Your Note"
+
+[anki]
+deck = "Kindle"
+model = "Basic"
+front_field = "Front"
+back_field = "Back"
+url = "http://localhost:8765"
+```
+
+Sections are optional: omitted `[parser]` or `[anki]` values keep the built-in defaults.
+
+Duplicate notes are always allowed (`allowDuplicate: true`) because many highlights share the same book title on the front of the card.
