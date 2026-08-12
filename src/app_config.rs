@@ -2,11 +2,21 @@ use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::path::PathBuf;
 
+fn default_ignored() -> Vec<String> {
+    vec![
+        // Junk notices Kindle injects when a book's clipping limit is hit
+        "<Vous avez atteint la limite maximale".to_owned(),
+        "<You have reached the clipping limit".to_owned(),
+    ]
+}
+
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct ParserConfig {
     pub bookmark: String,
     pub highlight: String,
     pub note: String,
+    #[serde(default = "default_ignored")]
+    pub ignored: Vec<String>,
 }
 
 impl Default for ParserConfig {
@@ -15,6 +25,7 @@ impl Default for ParserConfig {
             bookmark: "- Votre signet".to_owned(),
             highlight: "- Votre surlignement".to_owned(),
             note: "- Votre note".to_owned(),
+            ignored: default_ignored(),
         }
     }
 }
@@ -81,6 +92,13 @@ mod tests {
         assert_eq!(config.anki.front_field, "Recto");
         assert_eq!(config.anki.back_field, "Verso");
         assert_eq!(config.anki.url, "http://localhost:8765");
+        assert_eq!(
+            config.parser.ignored,
+            [
+                "<Vous avez atteint la limite maximale",
+                "<You have reached the clipping limit"
+            ]
+        );
     }
 
     #[test]
@@ -138,6 +156,25 @@ url = "http://127.0.0.1:9999"
         assert_eq!(config.parser, ParserConfig::default());
         assert_eq!(config.anki.deck, "Clippings");
         assert_eq!(config.anki.url, "http://127.0.0.1:9999");
+    }
+
+    #[test]
+    fn test_custom_ignored_patterns_override_defaults() {
+        let mut file = NamedTempFile::new().unwrap();
+        write!(
+            file,
+            r#"
+[parser]
+bookmark = "- Your Bookmark"
+highlight = "- Your Highlight"
+note = "- Your Note"
+ignored = ["<skip me>"]
+"#
+        )
+        .unwrap();
+
+        let config = AppConfig::new(Some(file.path().to_path_buf())).unwrap();
+        assert_eq!(config.parser.ignored, ["<skip me>"]);
     }
 
     #[test]

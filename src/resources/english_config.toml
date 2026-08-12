@@ -3,6 +3,9 @@
 bookmark = "- Your Bookmark"
 highlight = "- Your Highlight"
 note = "- Your Note"
+# Note content is cut at the first ignored marker; cards left empty are skipped.
+# Defaults match Kindle's clipping-limit notices.
+ignored = ["<Vous avez atteint la limite maximale", "<You have reached the clipping limit"]
 
 [anki]
 deck = "Kindle"

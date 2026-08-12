@@ -68,6 +68,8 @@ Customize language and Anki settings with a TOML config file:
 bookmark = "- Votre signet"
 highlight = "- Votre surlignement"
 note = "- Votre note"
+# Note content is cut at the first ignored marker; cards left empty are skipped
+ignored = ["<Vous avez atteint la limite maximale", "<You have reached the clipping limit"]
 
 [anki]
 deck = "Kindle"
@@ -94,7 +96,8 @@ url = "http://localhost:8765"
 ```
 
 Sections are optional: omitted `[parser]` or `[anki]` values keep the built-in defaults.
+The built-in `ignored` patterns filter the notices Kindle injects when a book's clipping limit is reached.
 
-The parser transparently handles UTF-8 BOMs (including the per-entry BOMs some Kindle firmware inserts after each separator) and CRLF line endings.
+The parser also transparently handles UTF-8 BOMs (including the per-entry BOMs some Kindle firmware inserts after each separator) and CRLF line endings.
 
 Duplicate notes are always allowed (`allowDuplicate: true`) because many highlights share the same book title on the front of the card.

@@ -56,19 +56,31 @@ fn parse_note(lines: &[String], prefixes: &ParserConfig) -> Option<Note> {
         return None;
     }
 
-    let tidied_note: String = lines[1..]
+    let mut tidied_note: String = lines[1..]
         .iter()
         .filter(|l| !is_empty_or_useless_line(l, prefixes))
         .cloned()
         .collect::<Vec<_>>()
         .join("\n");
 
+    // Kindle clipping-limit notices terminate whatever they were injected
+    // into: cut everything from the first ignored marker onward.
+    let cut = prefixes
+        .ignored
+        .iter()
+        .filter_map(|pattern| tidied_note.find(pattern))
+        .min();
+    if let Some(pos) = cut {
+        tidied_note.truncate(pos);
+    }
+
+    let tidied_note = tidied_note.trim();
     if tidied_note.is_empty() {
         None
     } else {
         Some(Note {
             title: title.to_owned(),
-            tidied_note,
+            tidied_note: tidied_note.to_owned(),
         })
     }
 }
@@ -97,6 +109,7 @@ mod tests {
                 bookmark: "- Your Bookmark".to_owned(),
                 highlight: "- Your Highlight".to_owned(),
                 note: "- Your Note".to_owned(),
+                ..ParserConfig::default()
             },
             ..AppConfig::default()
         }
@@ -251,5 +264,40 @@ Deuxième ligne.\r
         assert_eq!(notes.len(), 1);
         assert_eq!(notes[0].title, "Livre (Auteur)");
         assert_eq!(notes[0].tidied_note, "Première ligne.\nDeuxième ligne.");
+    }
+
+    #[test]
+    fn skips_clipping_limit_junk_cards() {
+        let content = "\
+Livre (Auteur)
+- Votre surlignement Emplacement 1 | Ajouté le lundi 1 janvier 2020 à 10:00:00
+
+<Vous avez atteint la limite maximale d’extraits pour cet élément.>
+==========
+Livre (Auteur)
+- Votre surlignement Emplacement 2 | Ajouté le lundi 1 janvier 2020 à 10:00:00
+
+Surlignement utile.
+==========
+";
+        let file = write_temp(content);
+        let notes = parse_clippings(file.path(), &french_config()).unwrap();
+        assert_eq!(notes.len(), 1);
+        assert_eq!(notes[0].tidied_note, "Surlignement utile.");
+    }
+
+    #[test]
+    fn strips_inline_clipping_limit_notice() {
+        let content = "\
+Livre (Auteur)
+- Votre surlignement Emplacement 1 | Ajouté le lundi 1 janvier 2020 à 10:00:00
+
+Début du surlignement tronqué <Vous avez atteint la limite maximale d’extraits pour cet élément.>
+==========
+";
+        let file = write_temp(content);
+        let notes = parse_clippings(file.path(), &french_config()).unwrap();
+        assert_eq!(notes.len(), 1);
+        assert_eq!(notes[0].tidied_note, "Début du surlignement tronqué");
     }
 }
