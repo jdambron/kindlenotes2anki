@@ -95,4 +95,6 @@ url = "http://localhost:8765"
 
 Sections are optional: omitted `[parser]` or `[anki]` values keep the built-in defaults.
 
+The parser transparently handles UTF-8 BOMs (including the per-entry BOMs some Kindle firmware inserts after each separator) and CRLF line endings.
+
 Duplicate notes are always allowed (`allowDuplicate: true`) because many highlights share the same book title on the front of the card.

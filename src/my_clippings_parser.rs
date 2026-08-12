@@ -14,15 +14,16 @@ pub fn parse_clippings(filename: &Path, config: &AppConfig) -> Result<Vec<Note>>
     let mut notes = Vec::with_capacity(100);
     let mut current_note = Vec::with_capacity(10);
     let prefixes = &config.parser;
-    let mut first_line = true;
 
     for line in reader.lines() {
         let mut line = line?;
-        if first_line {
-            if line.starts_with('\u{feff}') {
-                line.drain(..'\u{feff}'.len_utf8());
-            }
-            first_line = false;
+        // Some Kindle firmware prepends a BOM to each appended entry, not
+        // just at the start of the file; Windows-edited files may be CRLF.
+        if line.starts_with('\u{feff}') {
+            line.drain(..'\u{feff}'.len_utf8());
+        }
+        if line.ends_with('\r') {
+            line.pop();
         }
         if line.starts_with(SEPARATOR) {
             if !current_note.is_empty() {
@@ -211,5 +212,44 @@ Livre (Auteur)
         let file = write_temp(content);
         let notes = parse_clippings(file.path(), &french_config()).unwrap();
         assert!(notes.is_empty());
+    }
+
+    #[test]
+    fn strips_bom_from_every_entry() {
+        // Some Kindle firmware prepends a BOM to each appended entry
+        let content = "\
+Livre (Auteur)
+- Votre surlignement Emplacement 1 | Ajouté le lundi 1 janvier 2020 à 10:00:00
+
+Premier.
+==========
+\u{feff}Livre (Auteur)
+- Votre surlignement Emplacement 2 | Ajouté le lundi 1 janvier 2020 à 10:00:00
+
+Deuxième.
+==========
+";
+        let file = write_temp(content);
+        let notes = parse_clippings(file.path(), &french_config()).unwrap();
+        assert_eq!(notes.len(), 2);
+        assert_eq!(notes[0].title, "Livre (Auteur)");
+        assert_eq!(notes[1].title, "Livre (Auteur)");
+    }
+
+    #[test]
+    fn handles_crlf_line_endings() {
+        let content = "\
+Livre (Auteur)\r
+- Votre surlignement Emplacement 1 | Ajouté le lundi 1 janvier 2020 à 10:00:00\r
+\r
+Première ligne.\r
+Deuxième ligne.\r
+==========\r
+";
+        let file = write_temp(content);
+        let notes = parse_clippings(file.path(), &french_config()).unwrap();
+        assert_eq!(notes.len(), 1);
+        assert_eq!(notes[0].title, "Livre (Auteur)");
+        assert_eq!(notes[0].tidied_note, "Première ligne.\nDeuxième ligne.");
     }
 }
