@@ -42,6 +42,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # GitHub macOS runners ship aws/tap without trust; brew warns on every use
+      - name: Remove untrusted Homebrew taps
+        if: runner.os == 'macOS'
+        run: brew untap aws/tap 2>/dev/null || true
+
       - name: Install Linux cross-compilation tools
         if: runner.os == 'Linux'
         run: |

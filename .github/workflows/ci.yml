@@ -47,6 +47,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
+      # GitHub macOS runners ship aws/tap without trust; brew warns on every use
+      - name: Remove untrusted Homebrew taps
+        if: runner.os == 'macOS'
+        run: brew untap aws/tap 2>/dev/null || true
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Run tests
         run: cargo test
