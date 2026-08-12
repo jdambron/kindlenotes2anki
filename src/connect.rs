@@ -3,12 +3,14 @@ use crate::note::Note as AppNote;
 use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::time::Duration;
 
 const DUPLICATE_SCOPE: &str = "deck";
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[derive(Deserialize)]
 struct ApiResponse {
-    result: Vec<Option<usize>>,
+    result: Option<Vec<Option<usize>>>,
     error: Option<String>,
 }
 
@@ -43,24 +45,42 @@ struct Options {
 }
 
 pub fn add_notes(notes: &[AppNote], config: &AnkiConfig) -> Result<usize> {
+    if notes.is_empty() {
+        return Ok(0);
+    }
     let notes_count = notes.len();
     let req = build_add_notes_request(notes, config);
-    let response: ApiResponse = ureq::post(&config.url)
-        .send_json(&req)
-        .with_context(|| {
-            format!(
-                "Failed to connect to AnkiConnect at {}. Is Anki running with the AnkiConnect add-on?",
-                config.url
-            )
-        })?
+    let agent_config = ureq::Agent::config_builder()
+        .timeout_global(Some(REQUEST_TIMEOUT))
+        .build();
+    let agent = ureq::Agent::new_with_config(agent_config);
+    let mut response = match agent.post(&config.url).send_json(&req) {
+        Ok(response) => response,
+        Err(ureq::Error::StatusCode(code)) => bail!(
+            "AnkiConnect at {} returned HTTP {code}. Check that Anki is idle (not syncing) and retry.",
+            config.url
+        ),
+        Err(err) => {
+            return Err(err).with_context(|| {
+                format!(
+                    "Failed to connect to AnkiConnect at {}. Is Anki running with the AnkiConnect add-on?",
+                    config.url
+                )
+            });
+        }
+    };
+    let parsed: ApiResponse = response
         .body_mut()
         .read_json()
         .context("Failed to parse AnkiConnect response")?;
 
-    if let Some(error) = response.error {
-        bail!(error);
+    if let Some(error) = parsed.error {
+        bail!("AnkiConnect error: {error}");
     }
-    let created = response.result.into_iter().flatten().count();
+    let Some(result) = parsed.result else {
+        bail!("Unexpected AnkiConnect response: missing result");
+    };
+    let created = result.into_iter().flatten().count();
     if created == notes_count {
         Ok(created)
     } else {
@@ -151,7 +171,10 @@ mod tests {
         String::from_utf8_lossy(&buf).into_owned()
     }
 
-    fn spawn_json_server(response_body: &'static str) -> (String, thread::JoinHandle<String>) {
+    fn spawn_server(
+        status: &'static str,
+        body: &'static str,
+    ) -> (String, thread::JoinHandle<String>) {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let addr = listener.local_addr().unwrap();
         let handle = thread::spawn(move || {
@@ -161,14 +184,18 @@ mod tests {
                 .unwrap();
             let request = read_http_request(&mut stream);
             let response = format!(
-                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-                response_body.len(),
-                response_body
+                "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
             );
             stream.write_all(response.as_bytes()).unwrap();
             request
         });
         (format!("http://{addr}"), handle)
+    }
+
+    fn spawn_json_server(response_body: &'static str) -> (String, thread::JoinHandle<String>) {
+        spawn_server("200 OK", response_body)
     }
 
     #[test]
@@ -228,6 +255,50 @@ mod tests {
         let err = add_notes(&sample_notes(), &config).unwrap_err();
         assert!(
             err.to_string().contains("1/2 succeeded"),
+            "unexpected error: {err}"
+        );
+        server.join().unwrap();
+    }
+
+    #[test]
+    fn add_notes_with_no_notes_makes_no_http_call() {
+        // Connection would be refused if any HTTP call were attempted
+        let config = AnkiConfig {
+            url: "http://127.0.0.1:1".to_owned(),
+            ..AnkiConfig::default()
+        };
+        let created = add_notes(&[], &config).unwrap();
+        assert_eq!(created, 0);
+    }
+
+    #[test]
+    fn add_notes_reports_api_error_with_null_result() {
+        let (url, server) = spawn_json_server(r#"{"result":null,"error":"database is locked"}"#);
+        let config = AnkiConfig {
+            url,
+            ..AnkiConfig::default()
+        };
+        let err = add_notes(&sample_notes(), &config).unwrap_err();
+        assert!(
+            err.to_string().contains("database is locked"),
+            "unexpected error: {err}"
+        );
+        server.join().unwrap();
+    }
+
+    #[test]
+    fn add_notes_reports_http_status_error() {
+        let (url, server) = spawn_server(
+            "500 Internal Server Error",
+            r#"{"result":null,"error":"boom"}"#,
+        );
+        let config = AnkiConfig {
+            url,
+            ..AnkiConfig::default()
+        };
+        let err = add_notes(&sample_notes(), &config).unwrap_err();
+        assert!(
+            err.to_string().contains("HTTP 500"),
             "unexpected error: {err}"
         );
         server.join().unwrap();
