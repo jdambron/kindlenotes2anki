@@ -6,124 +6,103 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
-  build-linux:
-    runs-on: ubuntu-latest
+  build:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        target:
-          [
-            "x86_64-unknown-linux-gnu",
-            "x86_64-unknown-linux-musl",
-            "armv7-unknown-linux-gnueabihf",
-          ]
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            bin: kindlenotes2anki
+            asset: kindlenotes2anki-x86_64-unknown-linux-gnu
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            bin: kindlenotes2anki
+            asset: kindlenotes2anki-x86_64-unknown-linux-musl
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            bin: kindlenotes2anki
+            asset: kindlenotes2anki-aarch64-unknown-linux-gnu
+          - target: armv7-unknown-linux-gnueabihf
+            os: ubuntu-latest
+            bin: kindlenotes2anki
+            asset: kindlenotes2anki-armv7-unknown-linux-gnueabihf
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            bin: kindlenotes2anki
+            asset: kindlenotes2anki-aarch64-apple-darwin
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            bin: kindlenotes2anki.exe
+            asset: kindlenotes2anki-x86_64-pc-windows-msvc.exe
     steps:
-      - uses: actions/checkout@v6
-      - name: Cache cargo dependencies
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install prerequisites
+      - uses: actions/checkout@v7
+
+      - name: Install Linux cross-compilation tools
+        if: runner.os == 'Linux'
         run: |
-          case ${{ matrix.target }} in
-            arm*) sudo apt-get -y update ; sudo apt-get -y install gcc-arm-linux-gnueabihf ;;
+          sudo apt-get -y update
+          case "${{ matrix.target }}" in
+            x86_64-unknown-linux-musl)
+              sudo apt-get -y install musl-tools
+              ;;
+            aarch64-unknown-linux-gnu)
+              sudo apt-get -y install gcc-aarch64-linux-gnu
+              ;;
+            armv7-unknown-linux-gnueabihf)
+              sudo apt-get -y install gcc-arm-linux-gnueabihf
+              ;;
           esac
-      - name: Install target
-        run: rustup update && rustup target add ${{ matrix.target }}
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: ${{ matrix.target }}
+          # Keep target.*.linker from .cargo/config.toml effective
+          rustflags: ""
+
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
-      - uses: actions/upload-artifact@v7
-        with:
-          name: "kindlenotes2anki-${{ matrix.target }}"
-          path: "target/${{ matrix.target }}/release/kindlenotes2anki"
-          if-no-files-found: error
 
-  build-macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Cache cargo dependencies
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install apple darwin target
-        run: rustup update && rustup target add aarch64-apple-darwin
-      - name: Build macos
-        run: cargo build --release --target=aarch64-apple-darwin
-      - uses: actions/upload-artifact@v7
-        with:
-          name: "kindlenotes2anki-aarch64-apple-darwin"
-          path: "target/aarch64-apple-darwin/release/kindlenotes2anki"
-          if-no-files-found: error
+      - name: Stage artifact
+        shell: bash
+        run: |
+          mkdir -p dist
+          src="target/${{ matrix.target }}/release/${{ matrix.bin }}"
+          dst="dist/${{ matrix.asset }}"
+          cp "$src" "$dst"
+          if [[ "${{ runner.os }}" != "Windows" ]]; then
+            strip "$dst" || true
+          fi
 
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Cache cargo dependencies
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Install target
-        run: rustup update && rustup target add x86_64-pc-windows-msvc
-      - name: Build Windows
-        run: cargo build --release --target x86_64-pc-windows-msvc
       - uses: actions/upload-artifact@v7
         with:
-          name: "kindlenotes2anki-x86_64-pc-windows-msvc"
-          path: "target/x86_64-pc-windows-msvc/release/kindlenotes2anki.exe"
+          name: ${{ matrix.asset }}
+          path: dist/${{ matrix.asset }}
           if-no-files-found: error
 
   release-upload:
-    needs:
-      - build-linux
-      - build-macos
-      - build-windows
+    needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Download artifacts
         uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
 
       - name: Display structure of downloaded files
-        run: ls -lR
-
-      - name: Rename files
-        run: |
-          mv kindlenotes2anki-armv7-unknown-linux-gnueabihf/kindlenotes2anki kindlenotes2anki-armv7-unknown-linux-gnueabihf/kindlenotes2anki-armv7-unknown-linux-gnueabihf
-          mv kindlenotes2anki-x86_64-unknown-linux-gnu/kindlenotes2anki kindlenotes2anki-x86_64-unknown-linux-gnu/kindlenotes2anki-x86_64-unknown-linux-gnu
-          mv kindlenotes2anki-x86_64-unknown-linux-musl/kindlenotes2anki kindlenotes2anki-x86_64-unknown-linux-musl/kindlenotes2anki-x86_64-unknown-linux-musl
-          mv kindlenotes2anki-aarch64-apple-darwin/kindlenotes2anki kindlenotes2anki-aarch64-apple-darwin/kindlenotes2anki-aarch64-apple-darwin
+        run: ls -lR artifacts
 
       - name: Release
         uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: |
-            kindlenotes2anki-armv7-unknown-linux-gnueabihf/kindlenotes2anki-armv7-unknown-linux-gnueabihf
-            kindlenotes2anki-x86_64-unknown-linux-gnu/kindlenotes2anki-x86_64-unknown-linux-gnu
-            kindlenotes2anki-x86_64-unknown-linux-musl/kindlenotes2anki-x86_64-unknown-linux-musl
-            kindlenotes2anki-x86_64-pc-windows-msvc/kindlenotes2anki.exe
-            kindlenotes2anki-aarch64-apple-darwin/kindlenotes2anki-aarch64-apple-darwin
+          files: artifacts/*
