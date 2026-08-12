@@ -39,6 +39,13 @@ jobs:
       - name: Run clippy
         run: cargo clippy -- -D clippy::all -D clippy::pedantic -D warnings
 
+  deny:
+    name: cargo-deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: EmbarkStudios/cargo-deny-action@v2
+
   test:
     name: Test Suite
     strategy:
